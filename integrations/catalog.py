@@ -17,6 +17,7 @@ class IntegrationSpec:
 # V7 expands the supported application surface without making live API calls.
 _INTEGRATIONS: tuple[IntegrationSpec, ...] = (
     IntegrationSpec("webhook", "receive_request", "trigger", description="Receive an inbound webhook request."),
+    IntegrationSpec("forms", "receive_submission", "trigger", description="Receive a form submission."),
     IntegrationSpec("form", "receive_submission", "trigger", description="Receive a form submission."),
     IntegrationSpec("schedule", "run", "trigger", description="Start a workflow on a schedule."),
     IntegrationSpec("gmail", "send_email", "communication", ("to", "body"), "Send an email."),
@@ -30,6 +31,7 @@ _INTEGRATIONS: tuple[IntegrationSpec, ...] = (
     IntegrationSpec("airtable", "find_records", "data", ("query",), "Find Airtable records."),
     IntegrationSpec("telegram", "send_message", "communication", ("chat_id", "message"), "Send a Telegram message."),
     IntegrationSpec("http", "request", "utility", ("url", "method"), "Make a generic HTTP request."),
+    IntegrationSpec("ai", "analyze", "ai", description="Analyze or transform workflow data with an AI step."),
 )
 
 
