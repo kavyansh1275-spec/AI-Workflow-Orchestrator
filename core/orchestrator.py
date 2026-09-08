@@ -1,15 +1,17 @@
 from __future__ import annotations
 
+from core.brain import WorkflowBrain
 from core.deployer import Deployer
 from core.executor import Executor
 from core.generator import WorkflowGenerator
 from core.planner import Planner
+from core.provider_optimizer import ProviderOptimizer
 from core.provider_selector import ProviderSelector
 from models.workflow import WorkflowPlan
 
 
 class Orchestrator:
-    """V4 application service: understand -> plan -> generate -> deploy."""
+    """V5 application service: understand -> decide -> plan -> generate -> deploy."""
 
     def __init__(
         self,
@@ -18,16 +20,25 @@ class Orchestrator:
         provider_selector: ProviderSelector | None = None,
         deployer: Deployer | None = None,
         generator: WorkflowGenerator | None = None,
+        brain: WorkflowBrain | None = None,
+        provider_optimizer: ProviderOptimizer | None = None,
     ) -> None:
         self.planner = planner or Planner()
         self.executor = executor or Executor()
         self.provider_selector = provider_selector or ProviderSelector()
         self.deployer = deployer or Deployer()
         self.generator = generator or WorkflowGenerator()
+        self.brain = brain or WorkflowBrain(self.planner.intelligence)
+        self.provider_optimizer = provider_optimizer or ProviderOptimizer()
 
     def build(self, request: str) -> WorkflowPlan:
         workflow = self.planner.plan(request)
-        workflow = self.provider_selector.apply(workflow)
+        intent = self.brain.understand(request)
+        provider, _ = self.provider_optimizer.choose(request, intent)
+        if provider == "generic":
+            workflow = self.provider_selector.apply(workflow)
+        else:
+            workflow = workflow.model_copy(update={"provider": provider})
         self.validate(workflow)
         return workflow
 
@@ -50,8 +61,14 @@ class Orchestrator:
                 raise ValueError(f"workflow step {step.id} cannot depend on itself")
 
     def analyze(self, request: str) -> dict:
-        intent = self.planner.intelligence.analyze(request)
-        return intent.model_dump()
+        return self.brain.understand(request).model_dump()
+
+    def decide(self, request: str) -> dict:
+        decision = self.brain.decide(request)
+        provider, reason = self.provider_optimizer.choose(request, self.brain.understand(request))
+        decision["provider"] = provider
+        decision["provider_reason"] = reason
+        return decision
 
     def simulate(self, request: str) -> list[str]:
         workflow = self.build(request)
