@@ -1,4 +1,4 @@
-name: V7 Validation
+name: V8 Validation
 
 on:
   push:
@@ -11,7 +11,7 @@ on:
 
 jobs:
   validate:
-    name: Validate V7
+    name: Validate V8
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -31,7 +31,7 @@ jobs:
       - name: Run unit tests
         run: python -m unittest discover -s tests -v
 
-      - name: Run V7 CLI smoke test
+      - name: Run V8 CLI smoke test
         shell: bash
         run: |
           printf '%s\n' \
