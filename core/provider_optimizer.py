@@ -16,5 +16,9 @@ class ProviderOptimizer:
         if len(intent.actions) == 2:
             return "make", "multi_step"
         if len(intent.actions) == 1:
-            return "zapier", "simple_automation"
+            # Keep V2's provider-neutral fallback for simple form workflows,
+            # while allowing a webhook-based simple automation to use Zapier.
+            if intent.trigger == "webhook.receive_request":
+                return "zapier", "simple_webhook_automation"
+            return "generic", "simple_provider_neutral_automation"
         return "generic", "insufficient_workflow_detail"
