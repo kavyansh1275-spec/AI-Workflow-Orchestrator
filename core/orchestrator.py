@@ -8,7 +8,7 @@ from models.workflow import WorkflowPlan
 
 
 class Orchestrator:
-    """V2 application service: request -> plan -> provider -> validation."""
+    """V3 application service: understand -> plan -> provider -> validate."""
 
     def __init__(
         self,
@@ -37,6 +37,18 @@ class Orchestrator:
         ids = [step.id for step in workflow.steps]
         if len(ids) != len(set(ids)):
             raise ValueError("workflow step IDs must be unique")
+
+        known_ids = set(ids)
+        for step in workflow.steps:
+            missing = set(step.depends_on) - known_ids
+            if missing:
+                raise ValueError(f"workflow step {step.id} has unknown dependencies: {sorted(missing)}")
+            if step.id in step.depends_on:
+                raise ValueError(f"workflow step {step.id} cannot depend on itself")
+
+    def analyze(self, request: str) -> dict:
+        intent = self.planner.intelligence.analyze(request)
+        return intent.model_dump()
 
     def simulate(self, request: str) -> list[str]:
         workflow = self.build(request)
