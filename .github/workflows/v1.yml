@@ -1,4 +1,4 @@
-name: V1 Validation
+name: V2 Validation
 
 on:
   push:
@@ -21,5 +21,5 @@ jobs:
         run: python -m compileall -q .
       - name: Run unit tests
         run: python -m unittest discover -s tests -v
-      - name: Run CLI smoke test
-        run: printf '%s\n' "Create a workflow that receives a form submission, analyzes it with AI, and sends the result to Gmail." "exit" | python main.py
+      - name: Run V2 CLI smoke test
+        run: printf '%s\n' "Build this in n8n: receive a webhook, analyze it with AI, and send the result to Gmail." "exit" | python main.py
