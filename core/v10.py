@@ -38,8 +38,8 @@ class V10Engine:
 
         self.orchestrator.validate(workflow)
         integrations = self.orchestrator.inspect_integrations(request)
-        gates.append(QualityGate("workflow-structure", GateStatus.PASSED, "Workflow structure and dependencies are valid."))
-        gates.append(QualityGate("integrations", GateStatus.PASSED, f"All {len(integrations)} workflow capabilities are supported."))
+        gates.append(QualityGate(name="workflow-structure", status=GateStatus.PASSED, message="Workflow structure and dependencies are valid."))
+        gates.append(QualityGate(name="integrations", status=GateStatus.PASSED, message=f"All {len(integrations)} workflow capabilities are supported."))
         events.append(self._event(V10Stage.VALIDATE, "completed", "All V10 quality gates passed.", gate_count=len(gates)))
 
         generated = self.orchestrator.generate(request)
