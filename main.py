@@ -1,12 +1,13 @@
 from core.orchestrator import Orchestrator
+from core.v10 import V10Engine
 
 
 def main() -> None:
-    print("AI Workflow Orchestrator - V9")
-    print("AI decision-making + integration validation + runtime + production release + autonomous supervision enabled.")
-    print("Type an automation request. Type 'exit' to quit.\n")
+    print("AI Workflow Orchestrator - V10")
+    print("Unified end-to-end AI workflow pipeline with quality gates, runtime, releases, and autonomous supervision.")
+    print("Safe dry-run mode is enabled. Type an automation request. Type 'exit' to quit.\n")
 
-    orchestrator = Orchestrator()
+    engine = V10Engine(Orchestrator())
 
     while True:
         request = input("> ").strip()
@@ -17,25 +18,9 @@ def main() -> None:
             continue
 
         try:
-            decision = orchestrator.decide(request)
-            workflow = orchestrator.build(request)
-            generated = orchestrator.generate(request)
-            execution = orchestrator.execute(request, dry_run=True)
-            release = orchestrator.release(request, environment="staging", dry_run=True)
-            supervision = orchestrator.supervise(request, execution=execution)
-
-            print("\nAI Decision:")
-            print(decision)
-            print("\nWorkflow:")
-            print(workflow.to_pretty_json())
-            print("\nGenerated provider artifact (dry-run):")
-            print(generated)
-            print("\nLocal Runtime Execution (dry-run):")
-            print(execution)
-            print("\nV8 Release Plan (staging, dry-run):")
-            print(release)
-            print("\nV9 Autonomous Supervision (dry-run):")
-            print(supervision)
+            run = engine.run(request, environment="staging", dry_run=True)
+            print("\nV10 Run:")
+            print(run.model_dump_json(indent=2))
         except Exception as exc:
             print(f"Error: {exc}")
 
