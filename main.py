@@ -2,8 +2,8 @@ from core.orchestrator import Orchestrator
 
 
 def main() -> None:
-    print("AI Workflow Orchestrator - V8")
-    print("AI decision-making + integration validation + local runtime + production release planning enabled.")
+    print("AI Workflow Orchestrator - V9")
+    print("AI decision-making + integration validation + runtime + production release + autonomous supervision enabled.")
     print("Type an automation request. Type 'exit' to quit.\n")
 
     orchestrator = Orchestrator()
@@ -22,6 +22,7 @@ def main() -> None:
             generated = orchestrator.generate(request)
             execution = orchestrator.execute(request, dry_run=True)
             release = orchestrator.release(request, environment="staging", dry_run=True)
+            supervision = orchestrator.supervise(request, execution=execution)
 
             print("\nAI Decision:")
             print(decision)
@@ -33,8 +34,8 @@ def main() -> None:
             print(execution)
             print("\nV8 Release Plan (staging, dry-run):")
             print(release)
-            print("\nLegacy provider deployment (dry-run):")
-            print(orchestrator.deploy(request, dry_run=True))
+            print("\nV9 Autonomous Supervision (dry-run):")
+            print(supervision)
         except Exception as exc:
             print(f"Error: {exc}")
 
