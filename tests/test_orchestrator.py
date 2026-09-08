@@ -66,6 +66,37 @@ class OrchestratorTests(unittest.TestCase):
         self.assertEqual(intent["actions"], ["ai.analyze", "gmail.send_email"])
         self.assertGreaterEqual(intent["confidence"], 0.8)
 
+    def test_v4_n8n_generation(self) -> None:
+        result = self.orchestrator.generate(
+            "Build this in n8n: receive a webhook, analyze it with AI, and send the result to Gmail"
+        )
+
+        self.assertEqual(result["provider"], "n8n")
+        self.assertTrue(result["dry_run"])
+        artifact = result["artifact"]
+        self.assertEqual(artifact["format"], "n8n")
+        self.assertEqual(len(artifact["nodes"]), 3)
+        self.assertIn("step_1", artifact["connections"])
+
+    def test_v4_make_generation(self) -> None:
+        result = self.orchestrator.generate(
+            "Build this in Make: receive a webhook and send the result to Gmail"
+        )
+
+        self.assertEqual(result["provider"], "make")
+        self.assertEqual(result["artifact"]["format"], "make")
+        self.assertEqual(len(result["artifact"]["modules"]), 2)
+        self.assertEqual(result["artifact"]["modules"][1]["depends_on"], [1])
+
+    def test_v4_zapier_generation(self) -> None:
+        result = self.orchestrator.generate(
+            "Build this in Zapier: receive a webhook, analyze with AI, and email the result"
+        )
+
+        self.assertEqual(result["provider"], "zapier")
+        self.assertEqual(result["artifact"]["format"], "zapier")
+        self.assertEqual([step["order"] for step in result["artifact"]["steps"]], [1, 2, 3])
+
     def test_empty_request_rejected(self) -> None:
         with self.assertRaises(ValueError):
             self.orchestrator.build("   ")
