@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from core.autonomy import AutonomousManager
 from core.brain import WorkflowBrain
 from core.deployer import Deployer
 from core.executor import Executor
@@ -10,25 +11,20 @@ from core.production import ProductionDeployer
 from core.provider_optimizer import ProviderOptimizer
 from core.provider_selector import ProviderSelector
 from core.runtime import WorkflowRuntime
+from models.autonomy import WorkflowState
 from models.workflow import WorkflowPlan
 
 
 class Orchestrator:
-    """V8 application service: understand -> decide -> integrate -> execute -> release."""
+    """V9 application service: understand -> decide -> integrate -> execute -> release -> supervise."""
 
-    def __init__(
-        self,
-        planner: Planner | None = None,
-        executor: Executor | None = None,
-        provider_selector: ProviderSelector | None = None,
-        deployer: Deployer | None = None,
-        generator: WorkflowGenerator | None = None,
-        brain: WorkflowBrain | None = None,
-        provider_optimizer: ProviderOptimizer | None = None,
-        runtime: WorkflowRuntime | None = None,
-        integration_manager: IntegrationManager | None = None,
-        production_deployer: ProductionDeployer | None = None,
-    ) -> None:
+    def __init__(self, planner: Planner | None = None, executor: Executor | None = None,
+                 provider_selector: ProviderSelector | None = None, deployer: Deployer | None = None,
+                 generator: WorkflowGenerator | None = None, brain: WorkflowBrain | None = None,
+                 provider_optimizer: ProviderOptimizer | None = None, runtime: WorkflowRuntime | None = None,
+                 integration_manager: IntegrationManager | None = None,
+                 production_deployer: ProductionDeployer | None = None,
+                 autonomy_manager: AutonomousManager | None = None) -> None:
         self.planner = planner or Planner()
         self.executor = executor or Executor()
         self.provider_selector = provider_selector or ProviderSelector()
@@ -38,18 +34,14 @@ class Orchestrator:
         self.provider_optimizer = provider_optimizer or ProviderOptimizer()
         self.runtime = runtime or WorkflowRuntime()
         self.integration_manager = integration_manager or IntegrationManager()
-        self.production_deployer = production_deployer or ProductionDeployer(
-            self.generator, self.integration_manager
-        )
+        self.production_deployer = production_deployer or ProductionDeployer(self.generator, self.integration_manager)
+        self.autonomy_manager = autonomy_manager or AutonomousManager()
 
     def build(self, request: str) -> WorkflowPlan:
         workflow = self.planner.plan(request)
         intent = self.brain.understand(request)
         provider, _ = self.provider_optimizer.choose(request, intent)
-        if provider == "generic":
-            workflow = self.provider_selector.apply(workflow)
-        else:
-            workflow = workflow.model_copy(update={"provider": provider})
+        workflow = self.provider_selector.apply(workflow) if provider == "generic" else workflow.model_copy(update={"provider": provider})
         self.validate(workflow)
         self.integration_manager.validate_workflow(workflow)
         return workflow
@@ -59,11 +51,9 @@ class Orchestrator:
             raise ValueError("workflow must contain at least one step")
         if workflow.steps[0].type != "trigger":
             raise ValueError("workflow must start with a trigger")
-
         ids = [step.id for step in workflow.steps]
         if len(ids) != len(set(ids)):
             raise ValueError("workflow step IDs must be unique")
-
         known_ids = set(ids)
         for step in workflow.steps:
             missing = set(step.depends_on) - known_ids
@@ -83,50 +73,26 @@ class Orchestrator:
         return decision
 
     def inspect_integrations(self, request: str) -> list[dict[str, object]]:
-        """Return the V7 capability map for the generated workflow."""
         return self.integration_manager.inspect(self.build(request))
 
     def list_integrations(self) -> dict[str, list[str]]:
-        """Return all V7-supported application capabilities."""
         return self.integration_manager.capabilities()
 
     def simulate(self, request: str) -> list[str]:
-        workflow = self.build(request)
-        return self.executor.run(workflow)
+        return self.executor.run(self.build(request))
 
     def generate(self, request: str) -> dict:
         workflow = self.build(request)
-        artifact = self.generator.generate(workflow)
-        return {
-            "provider": workflow.provider,
-            "name": workflow.name,
-            "artifact": artifact,
-            "dry_run": True,
-        }
+        return {"provider": workflow.provider, "name": workflow.name, "artifact": self.generator.generate(workflow), "dry_run": True}
 
     def execute(self, request: str, dry_run: bool = True) -> dict:
-        """Run the V6/V7 local runtime and return a serializable execution report."""
-        workflow = self.build(request)
-        result = self.runtime.run(workflow, dry_run=dry_run)
-        return result.model_dump()
+        return self.runtime.run(self.build(request), dry_run=dry_run).model_dump()
 
     def deploy(self, request: str, dry_run: bool = True) -> dict:
-        workflow = self.build(request)
-        return self.deployer.deploy(workflow, dry_run=dry_run)
+        return self.deployer.deploy(self.build(request), dry_run=dry_run)
 
-    def release(
-        self,
-        request: str,
-        environment: str = "staging",
-        dry_run: bool = True,
-    ) -> dict:
-        """Prepare a V8 release using the safe local production deployment layer."""
-        workflow = self.build(request)
-        return self.production_deployer.deploy(
-            workflow,
-            environment=environment,
-            dry_run=dry_run,
-        ).model_dump()
+    def release(self, request: str, environment: str = "staging", dry_run: bool = True) -> dict:
+        return self.production_deployer.deploy(self.build(request), environment=environment, dry_run=dry_run).model_dump()
 
     def deployment_history(self) -> list[dict]:
         return [record.model_dump() for record in self.production_deployer.history()]
@@ -136,3 +102,6 @@ class Orchestrator:
 
     def deployment_health(self, release_id: str) -> dict[str, object]:
         return self.production_deployer.health(release_id)
+
+    def supervise(self, request: str, execution: dict | None = None, previous_state: WorkflowState | None = None) -> dict:
+        return self.autonomy_manager.supervise(self.build(request), execution=execution, previous_state=previous_state).model_dump()
