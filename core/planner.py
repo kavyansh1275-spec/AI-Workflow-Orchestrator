@@ -12,6 +12,11 @@ class Planner:
     foundation is testable without API keys. An AI planner can replace this class later.
     """
 
+    @staticmethod
+    def _contains_any(text: str, phrases: tuple[str, ...]) -> bool:
+        """Return True when a phrase appears as a complete word/phrase."""
+        return any(re.search(rf"(?<![a-z0-9]){re.escape(phrase)}(?![a-z0-9])", text) for phrase in phrases)
+
     def plan(self, request: str) -> WorkflowPlan:
         request = request.strip()
         if not request:
@@ -20,7 +25,7 @@ class Planner:
         lowered = request.lower()
         steps: list[WorkflowStep] = []
 
-        if any(word in lowered for word in ("form", "forms", "form submission")):
+        if self._contains_any(lowered, ("form", "forms", "form submission")):
             steps.append(
                 WorkflowStep(
                     id="step_1",
@@ -29,7 +34,7 @@ class Planner:
                     action="receive_submission",
                 )
             )
-        elif any(word in lowered for word in ("webhook", "http request")):
+        elif self._contains_any(lowered, ("webhook", "http request")):
             steps.append(
                 WorkflowStep(
                     id="step_1",
@@ -38,7 +43,7 @@ class Planner:
                     action="receive_request",
                 )
             )
-        elif "schedule" in lowered or "scheduled" in lowered:
+        elif self._contains_any(lowered, ("schedule", "scheduled")):
             steps.append(
                 WorkflowStep(
                     id="step_1",
@@ -59,7 +64,7 @@ class Planner:
 
         next_id = 2
 
-        if any(word in lowered for word in ("ai", "analyze", "analyse", "summarize", "classify")):
+        if self._contains_any(lowered, ("ai", "analyze", "analyse", "summarize", "classify")):
             steps.append(
                 WorkflowStep(
                     id=f"step_{next_id}",
@@ -71,7 +76,7 @@ class Planner:
             )
             next_id += 1
 
-        if any(word in lowered for word in ("gmail", "email", "e-mail", "mail")):
+        if self._contains_any(lowered, ("gmail", "email", "e-mail", "mail")):
             steps.append(
                 WorkflowStep(
                     id=f"step_{next_id}",
@@ -82,7 +87,7 @@ class Planner:
                 )
             )
             next_id += 1
-        elif "slack" in lowered:
+        elif self._contains_any(lowered, ("slack",)):
             steps.append(
                 WorkflowStep(
                     id=f"step_{next_id}",
@@ -94,7 +99,7 @@ class Planner:
             )
             next_id += 1
 
-        if "spreadsheet" in lowered or "google sheets" in lowered or "sheets" in lowered:
+        if self._contains_any(lowered, ("spreadsheet", "google sheets", "sheets")):
             steps.append(
                 WorkflowStep(
                     id=f"step_{next_id}",
