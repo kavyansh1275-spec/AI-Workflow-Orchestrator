@@ -16,6 +16,9 @@ class OrchestratorTests(unittest.TestCase):
         self.assertEqual(workflow.steps[0].app, "forms")
         self.assertEqual(workflow.steps[1].app, "ai")
         self.assertEqual(workflow.steps[2].app, "gmail")
+        self.assertEqual(workflow.steps[1].depends_on, ["step_1"])
+        self.assertEqual(workflow.steps[2].depends_on, ["step_2"])
+        self.assertGreaterEqual(workflow.intent_confidence, 0.8)
 
     def test_webhook_slack_request(self) -> None:
         workflow = self.orchestrator.build("Receive a webhook and send a Slack message")
@@ -28,6 +31,40 @@ class OrchestratorTests(unittest.TestCase):
 
         self.assertEqual(workflow.steps[-1].app, "google_sheets")
         self.assertEqual(workflow.steps[-1].action, "append_row")
+
+    def test_v3_multi_action_request(self) -> None:
+        workflow = self.orchestrator.build(
+            "In n8n, receive a webhook, analyze it with AI, send an email, then post to Slack"
+        )
+
+        self.assertEqual(workflow.provider, "n8n")
+        self.assertEqual(
+            [(step.app, step.action) for step in workflow.steps],
+            [
+                ("webhook", "receive_request"),
+                ("ai", "analyze"),
+                ("gmail", "send_email"),
+                ("slack", "send_message"),
+            ],
+        )
+
+    def test_v3_condition_is_attached_to_actions(self) -> None:
+        workflow = self.orchestrator.build(
+            "Receive a form, if the score is high then send an email"
+        )
+
+        self.assertTrue(workflow.steps[-1].condition)
+        self.assertIn("score is high", workflow.steps[-1].condition)
+
+    def test_v3_analysis(self) -> None:
+        intent = self.orchestrator.analyze(
+            "Build this in Make: receive a webhook, analyze with AI, and send to Gmail"
+        )
+
+        self.assertEqual(intent["provider"], "make")
+        self.assertEqual(intent["trigger"], "webhook.receive_request")
+        self.assertEqual(intent["actions"], ["ai.analyze", "gmail.send_email"])
+        self.assertGreaterEqual(intent["confidence"], 0.8)
 
     def test_empty_request_rejected(self) -> None:
         with self.assertRaises(ValueError):
