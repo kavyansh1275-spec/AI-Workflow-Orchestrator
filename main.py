@@ -2,8 +2,8 @@ from core.orchestrator import Orchestrator
 
 
 def main() -> None:
-    print("AI Workflow Orchestrator - V2")
-    print("Provider selection + safe dry-run deployment enabled.")
+    print("AI Workflow Orchestrator - V3")
+    print("Natural-language intent analysis + dependency-aware planning enabled.")
     print("Type an automation request. Type 'exit' to quit.\n")
 
     orchestrator = Orchestrator()
@@ -17,7 +17,11 @@ def main() -> None:
             continue
 
         try:
+            intent = orchestrator.analyze(request)
             workflow = orchestrator.build(request)
+            print("\nIntent:")
+            print(intent)
+            print("\nWorkflow:")
             print(workflow.to_pretty_json())
             print("\nDry-run deployment:")
             print(orchestrator.deploy(request, dry_run=True))
