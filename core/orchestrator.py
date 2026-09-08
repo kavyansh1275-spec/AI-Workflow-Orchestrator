@@ -4,6 +4,7 @@ from core.brain import WorkflowBrain
 from core.deployer import Deployer
 from core.executor import Executor
 from core.generator import WorkflowGenerator
+from core.integration_manager import IntegrationManager
 from core.planner import Planner
 from core.provider_optimizer import ProviderOptimizer
 from core.provider_selector import ProviderSelector
@@ -12,7 +13,7 @@ from models.workflow import WorkflowPlan
 
 
 class Orchestrator:
-    """V6 application service: understand -> decide -> plan -> generate -> execute."""
+    """V7 application service: understand -> decide -> plan -> integrate -> execute."""
 
     def __init__(
         self,
@@ -24,6 +25,7 @@ class Orchestrator:
         brain: WorkflowBrain | None = None,
         provider_optimizer: ProviderOptimizer | None = None,
         runtime: WorkflowRuntime | None = None,
+        integration_manager: IntegrationManager | None = None,
     ) -> None:
         self.planner = planner or Planner()
         self.executor = executor or Executor()
@@ -33,6 +35,7 @@ class Orchestrator:
         self.brain = brain or WorkflowBrain(self.planner.intelligence)
         self.provider_optimizer = provider_optimizer or ProviderOptimizer()
         self.runtime = runtime or WorkflowRuntime()
+        self.integration_manager = integration_manager or IntegrationManager()
 
     def build(self, request: str) -> WorkflowPlan:
         workflow = self.planner.plan(request)
@@ -43,6 +46,7 @@ class Orchestrator:
         else:
             workflow = workflow.model_copy(update={"provider": provider})
         self.validate(workflow)
+        self.integration_manager.validate_workflow(workflow)
         return workflow
 
     def validate(self, workflow: WorkflowPlan) -> None:
@@ -73,6 +77,14 @@ class Orchestrator:
         decision["provider_reason"] = reason
         return decision
 
+    def inspect_integrations(self, request: str) -> list[dict[str, object]]:
+        """Return the V7 capability map for the generated workflow."""
+        return self.integration_manager.inspect(self.build(request))
+
+    def list_integrations(self) -> dict[str, list[str]]:
+        """Return all V7-supported application capabilities."""
+        return self.integration_manager.capabilities()
+
     def simulate(self, request: str) -> list[str]:
         workflow = self.build(request)
         return self.executor.run(workflow)
@@ -88,7 +100,7 @@ class Orchestrator:
         }
 
     def execute(self, request: str, dry_run: bool = True) -> dict:
-        """Run the V6 local runtime and return a serializable execution report."""
+        """Run the V6/V7 local runtime and return a serializable execution report."""
         workflow = self.build(request)
         result = self.runtime.run(workflow, dry_run=dry_run)
         return result.model_dump()
