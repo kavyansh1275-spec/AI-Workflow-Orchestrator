@@ -97,6 +97,32 @@ class OrchestratorTests(unittest.TestCase):
         self.assertEqual(result["artifact"]["format"], "zapier")
         self.assertEqual([step["order"] for step in result["artifact"]["steps"]], [1, 2, 3])
 
+    def test_v5_requirements_and_clarification(self) -> None:
+        decision = self.orchestrator.decide(
+            "Receive a form submission, analyze it with AI, and send the result to Gmail"
+        )
+
+        self.assertIn("forms", decision["requirements"]["apps"])
+        self.assertIn("ai", decision["requirements"]["apps"])
+        self.assertIn("gmail", decision["requirements"]["apps"])
+        self.assertIn("email recipient", decision["requirements"]["missing"])
+        self.assertTrue(decision["needs_clarification"])
+
+    def test_v5_provider_optimizer(self) -> None:
+        simple = self.orchestrator.build("Receive a webhook and send an email")
+        complex_workflow = self.orchestrator.build(
+            "Receive a webhook, analyze with AI, send an email, then post to Slack"
+        )
+
+        self.assertEqual(simple.provider, "zapier")
+        self.assertEqual(complex_workflow.provider, "n8n")
+
+    def test_v5_explicit_provider_wins(self) -> None:
+        workflow = self.orchestrator.build(
+            "Build this in Make: receive a webhook, analyze with AI, send an email, then post to Slack"
+        )
+        self.assertEqual(workflow.provider, "make")
+
     def test_empty_request_rejected(self) -> None:
         with self.assertRaises(ValueError):
             self.orchestrator.build("   ")
