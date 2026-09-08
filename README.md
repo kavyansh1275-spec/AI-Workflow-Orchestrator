@@ -1,6 +1,6 @@
 # AI Workflow Orchestrator
 
-V7 of an AI system that converts natural-language automation requests into structured, dependency-aware workflow plans, selects an automation provider, validates integration capabilities, generates provider-specific artifacts, and safely executes workflows in a deterministic local runtime.
+V8 of an AI system that converts natural-language automation requests into structured, dependency-aware workflow plans, selects an automation provider, validates integration capabilities, generates provider-specific artifacts, safely executes workflows in a deterministic local runtime, and prepares production-style releases with deployment history and rollback support.
 
 ## V1 foundation
 
@@ -71,6 +71,18 @@ V7 of an AI system that converts natural-language automation requests into struc
 - Reject unsupported application capabilities before execution or generation.
 - Keep all integration intelligence deterministic and offline; no external API calls are made.
 
+## V8 production/deployment layer
+
+- Add development, staging, and production deployment environments.
+- Build a release plan from a validated workflow and generated provider artifact.
+- Generate a SHA-256 artifact fingerprint for release traceability.
+- Create unique release IDs and maintain in-memory deployment history.
+- Provide safe dry-run deployment planning with zero external API calls.
+- Provide local rollback and deployment health reporting.
+- Explicitly block live deployment until future credential-aware provider adapters are implemented.
+- Expose release planning, history, rollback, and health checks through the orchestrator.
+- Keep the entire V8 layer deterministic and safe-by-default.
+
 ## Run
 
 ```bash
@@ -83,4 +95,4 @@ python main.py
 python -m unittest discover -s tests -v
 ```
 
-V7 expands the integration intelligence layer while remaining credential-free and dry-run only. Real provider credentials, live API calls, and production deployment remain future work.
+V8 adds production-style release management while remaining credential-free and dry-run only. GitHub Actions environments can later provide protected staging/production gates, approvals, concurrency, and environment-scoped secrets when live deployment adapters are introduced. GitHub documents environments and deployment protection rules as the mechanism for controlling deployments. 
