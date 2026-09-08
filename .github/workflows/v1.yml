@@ -2,24 +2,38 @@ name: V2 Validation
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   pull_request:
-    branches: [main]
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
   validate:
+    name: Validate V2
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v5
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
       - name: Install dependencies
         run: python -m pip install -r requirements.txt
+
       - name: Validate Python files
         run: python -m compileall -q .
+
       - name: Run unit tests
         run: python -m unittest discover -s tests -v
+
       - name: Run V2 CLI smoke test
-        run: printf '%s\n' "Build this in n8n: receive a webhook, analyze it with AI, and send the result to Gmail." "exit" | python main.py
+        shell: bash
+        run: |
+          printf '%s\n' \
+            "Build this in n8n: receive a webhook, analyze it with AI, and send the result to Gmail." \
+            "exit" | python main.py
