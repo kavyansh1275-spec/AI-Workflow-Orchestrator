@@ -1,2 +1,0 @@
-# V1 uses only Python standard-library modules.
-# Future external dependencies will be added here as integrations are implemented.
