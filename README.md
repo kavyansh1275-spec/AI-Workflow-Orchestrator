@@ -1,17 +1,28 @@
 # AI Workflow Orchestrator
 
-V9 of an AI system that converts natural-language automation requests into structured, dependency-aware workflow plans, selects an automation provider, validates integrations, generates provider artifacts, safely executes workflows, prepares production-style releases, and autonomously supervises workflow health and recovery decisions.
+V10 is the unified end-to-end orchestration layer for an AI system that converts natural-language automation requests into structured workflow plans, selects a provider, validates integrations, generates provider artifacts, simulates execution, prepares production-style releases, and supervises workflow health.
 
-## V9 autonomous management layer
+## V10 full orchestration layer
 
-- Monitor workflow health from execution results.
-- Maintain workflow supervision state and consecutive failure counts.
-- Automatically decide between monitor, retry, and rollback actions.
-- Trigger rollback decisions after three consecutive reported failures.
-- Generate unique decision IDs, confidence scores, reasons, timestamps, and metadata.
-- Expose autonomous supervision through the orchestrator and CLI.
-- Keep all autonomous decisions deterministic and dry-run by default.
-- Do not perform live external provider actions automatically.
+V10 composes the capabilities built across V1-V9 into one deterministic pipeline:
+
+1. **Understand** — interpret the natural-language request with the V5 decision engine.
+2. **Decide** — select the provider and workflow strategy.
+3. **Plan** — build a dependency-aware workflow.
+4. **Validate** — enforce workflow and integration quality gates.
+5. **Generate** — create the provider-specific artifact.
+6. **Execute** — run the local credential-free runtime simulation.
+7. **Release** — prepare a staging release plan without external deployment.
+8. **Supervise** — evaluate health and produce autonomous monitor/retry/rollback decisions.
+
+Every V10 run receives a unique run ID, confidence score, timestamped pipeline events, quality-gate results, and a structured result containing the outputs of the previous layers.
+
+## Safety and deployment policy
+
+- V10 is dry-run by default.
+- No external provider API calls or credentials are required.
+- Live execution is explicitly blocked until credential-aware provider adapters are implemented.
+- Autonomous actions remain recommendations/state transitions rather than uncontrolled external actions.
 
 ## Previous versions
 
@@ -23,6 +34,8 @@ V9 of an AI system that converts natural-language automation requests into struc
 - **V6:** Deterministic local execution runtime.
 - **V7:** Integration capability expansion and validation.
 - **V8:** Production-style releases, deployment history, health, and rollback.
+- **V9:** Autonomous workflow health supervision and recovery decisions.
+- **V10:** Unified end-to-end orchestration pipeline.
 
 ## Run
 
@@ -36,4 +49,4 @@ python main.py
 python -m unittest discover -s tests -v
 ```
 
-V9 remains credential-free and safe-by-default. Autonomous decisions are recommendations/state transitions only; live provider execution is intentionally deferred to the final production versions.
+The project remains credential-free and safe-by-default. V10 is the complete orchestration foundation; real provider deployment requires explicit credential-aware adapters and deployment controls in a future production-hardening phase.
