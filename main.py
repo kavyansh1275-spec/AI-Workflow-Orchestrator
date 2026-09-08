@@ -2,7 +2,8 @@ from core.orchestrator import Orchestrator
 
 
 def main() -> None:
-    print("AI Workflow Orchestrator - V1")
+    print("AI Workflow Orchestrator - V2")
+    print("Provider selection + safe dry-run deployment enabled.")
     print("Type an automation request. Type 'exit' to quit.\n")
 
     orchestrator = Orchestrator()
@@ -18,6 +19,8 @@ def main() -> None:
         try:
             workflow = orchestrator.build(request)
             print(workflow.to_pretty_json())
+            print("\nDry-run deployment:")
+            print(orchestrator.deploy(request, dry_run=True))
         except Exception as exc:
             print(f"Error: {exc}")
 
