@@ -1,2 +1,0 @@
-# V1 uses only Python standard-library modules.
-# This file records the dependency baseline for V1.
