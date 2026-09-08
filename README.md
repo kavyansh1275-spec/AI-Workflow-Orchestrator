@@ -1,6 +1,6 @@
 # AI Workflow Orchestrator
 
-V3 of an AI system that converts natural-language automation requests into structured, dependency-aware workflow plans and selects an automation provider.
+V4 of an AI system that converts natural-language automation requests into structured, dependency-aware workflow plans, selects an automation provider, and generates provider-specific workflow artifacts.
 
 ## V1 foundation
 
@@ -30,6 +30,17 @@ V3 of an AI system that converts natural-language automation requests into struc
 - Validate dependency references and reject self-dependencies.
 - Remain deterministic, offline, and safe-by-default with no API credentials required.
 
+## V4 workflow generation layer
+
+- Convert validated workflow plans into provider-specific artifacts.
+- Generate an n8n-style node and connection representation.
+- Generate a Make-style module representation with dependency numbers.
+- Generate a Zapier-style ordered step representation.
+- Preserve conditions, configuration, and dependencies in generated artifacts.
+- Keep generation deterministic and credential-free.
+- Expose generated artifacts through the orchestrator and CLI.
+- Keep generated workflows inactive/dry-run only; no external provider API is called.
+
 ## Run
 
 ```bash
@@ -42,4 +53,4 @@ python main.py
 python -m unittest discover -s tests -v
 ```
 
-V3 still uses dry-run deployment by default. No external provider API is called.
+V4 generates portable provider artifacts locally. Real provider API deployment remains a later version.
