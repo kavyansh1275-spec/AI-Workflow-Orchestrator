@@ -1,6 +1,6 @@
 # AI Workflow Orchestrator
 
-V6 of an AI system that converts natural-language automation requests into structured, dependency-aware workflow plans, selects an automation provider, generates provider-specific artifacts, and safely executes workflows in a deterministic local runtime.
+V7 of an AI system that converts natural-language automation requests into structured, dependency-aware workflow plans, selects an automation provider, validates integration capabilities, generates provider-specific artifacts, and safely executes workflows in a deterministic local runtime.
 
 ## V1 foundation
 
@@ -59,7 +59,17 @@ V6 of an AI system that converts natural-language automation requests into struc
 - Produce an execution ID and structured execution report.
 - Reject live execution explicitly; V6 remains dry-run only.
 - Expose runtime execution through the orchestrator and CLI.
-- Validate the full V6 pipeline through GitHub Actions.
+
+## V7 integration expansion layer
+
+- Add a central, credential-free integration capability catalog.
+- Validate every workflow step against a known app/action capability.
+- Support expanded capabilities for Gmail, Slack, Discord, Notion, Google Sheets, Airtable, Telegram, webhooks, forms, schedules, and generic HTTP requests.
+- Track capability categories and required configuration fields.
+- Allow safe `configure_*` placeholders until a future configuration/credential layer exists.
+- Expose integration inspection and the complete capability map through the orchestrator.
+- Reject unsupported application capabilities before execution or generation.
+- Keep all integration intelligence deterministic and offline; no external API calls are made.
 
 ## Run
 
@@ -73,4 +83,4 @@ python main.py
 python -m unittest discover -s tests -v
 ```
 
-V6 adds a local execution engine but does not call external provider APIs. Real provider credentials and live deployment remain future work.
+V7 expands the integration intelligence layer while remaining credential-free and dry-run only. Real provider credentials, live API calls, and production deployment remain future work.
