@@ -6,6 +6,7 @@ from core.executor import Executor
 from core.generator import WorkflowGenerator
 from core.integration_manager import IntegrationManager
 from core.planner import Planner
+from core.production import ProductionDeployer
 from core.provider_optimizer import ProviderOptimizer
 from core.provider_selector import ProviderSelector
 from core.runtime import WorkflowRuntime
@@ -13,7 +14,7 @@ from models.workflow import WorkflowPlan
 
 
 class Orchestrator:
-    """V7 application service: understand -> decide -> plan -> integrate -> execute."""
+    """V8 application service: understand -> decide -> integrate -> execute -> release."""
 
     def __init__(
         self,
@@ -26,6 +27,7 @@ class Orchestrator:
         provider_optimizer: ProviderOptimizer | None = None,
         runtime: WorkflowRuntime | None = None,
         integration_manager: IntegrationManager | None = None,
+        production_deployer: ProductionDeployer | None = None,
     ) -> None:
         self.planner = planner or Planner()
         self.executor = executor or Executor()
@@ -36,6 +38,9 @@ class Orchestrator:
         self.provider_optimizer = provider_optimizer or ProviderOptimizer()
         self.runtime = runtime or WorkflowRuntime()
         self.integration_manager = integration_manager or IntegrationManager()
+        self.production_deployer = production_deployer or ProductionDeployer(
+            self.generator, self.integration_manager
+        )
 
     def build(self, request: str) -> WorkflowPlan:
         workflow = self.planner.plan(request)
@@ -108,3 +113,26 @@ class Orchestrator:
     def deploy(self, request: str, dry_run: bool = True) -> dict:
         workflow = self.build(request)
         return self.deployer.deploy(workflow, dry_run=dry_run)
+
+    def release(
+        self,
+        request: str,
+        environment: str = "staging",
+        dry_run: bool = True,
+    ) -> dict:
+        """Prepare a V8 release using the safe local production deployment layer."""
+        workflow = self.build(request)
+        return self.production_deployer.deploy(
+            workflow,
+            environment=environment,
+            dry_run=dry_run,
+        ).model_dump()
+
+    def deployment_history(self) -> list[dict]:
+        return [record.model_dump() for record in self.production_deployer.history()]
+
+    def rollback(self, release_id: str) -> dict:
+        return self.production_deployer.rollback(release_id).model_dump()
+
+    def deployment_health(self, release_id: str) -> dict[str, object]:
+        return self.production_deployer.health(release_id)
