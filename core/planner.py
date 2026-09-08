@@ -2,111 +2,51 @@ from __future__ import annotations
 
 import re
 
+from core.intelligence import WorkflowIntelligence
 from models.workflow import WorkflowPlan, WorkflowStep
 
 
 class Planner:
-    """Convert common natural-language automation requests into a V1 plan.
+    """Convert normalized V3 intent into a dependency-aware workflow plan."""
 
-    V1 intentionally uses deterministic rules rather than an external LLM so the
-    foundation is testable without API keys. An AI planner can replace this class later.
-    """
-
-    @staticmethod
-    def _contains_any(text: str, phrases: tuple[str, ...]) -> bool:
-        """Return True when a phrase appears as a complete word/phrase."""
-        return any(re.search(rf"(?<![a-z0-9]){re.escape(phrase)}(?![a-z0-9])", text) for phrase in phrases)
+    def __init__(self, intelligence: WorkflowIntelligence | None = None) -> None:
+        self.intelligence = intelligence or WorkflowIntelligence()
 
     def plan(self, request: str) -> WorkflowPlan:
-        request = request.strip()
-        if not request:
-            raise ValueError("request cannot be empty")
-
-        lowered = request.lower()
-        steps: list[WorkflowStep] = []
-
-        if self._contains_any(lowered, ("form", "forms", "form submission")):
-            steps.append(
-                WorkflowStep(
-                    id="step_1",
-                    type="trigger",
-                    app="forms",
-                    action="receive_submission",
-                )
+        intent = self.intelligence.analyze(request)
+        steps: list[WorkflowStep] = [
+            WorkflowStep(
+                id="step_1",
+                type="trigger",
+                app=intent.trigger.split(".", 1)[0],
+                action=intent.trigger.split(".", 1)[1],
             )
-        elif self._contains_any(lowered, ("webhook", "http request")):
-            steps.append(
-                WorkflowStep(
-                    id="step_1",
-                    type="trigger",
-                    app="webhook",
-                    action="receive_request",
-                )
-            )
-        elif self._contains_any(lowered, ("schedule", "scheduled")):
-            steps.append(
-                WorkflowStep(
-                    id="step_1",
-                    type="trigger",
-                    app="scheduler",
-                    action="run_on_schedule",
-                )
-            )
-        else:
-            steps.append(
-                WorkflowStep(
-                    id="step_1",
-                    type="trigger",
-                    app="manual",
-                    action="start",
-                )
-            )
+        ]
 
-        next_id = 2
+        for index, action in enumerate(intent.actions, start=2):
+            app, operation = action.split(".", 1)
+            config = {"input": "previous_step.output"}
+            if action == "gmail.send_email":
+                config = {"to": "configure_recipient", "body": "previous_step.output"}
+            elif action == "slack.send_message":
+                config = {"channel": "configure_channel", "message": "previous_step.output"}
+            elif action == "google_sheets.append_row":
+                config = {"values": "previous_step.output"}
+            elif action == "notion.create_page":
+                config = {"title": "configure_title", "content": "previous_step.output"}
+            elif action == "discord.send_message":
+                config = {"channel": "configure_channel", "message": "previous_step.output"}
 
-        if self._contains_any(lowered, ("ai", "analyze", "analyse", "summarize", "classify")):
+            condition = intent.conditions[0] if intent.conditions else None
             steps.append(
                 WorkflowStep(
-                    id=f"step_{next_id}",
+                    id=f"step_{index}",
                     type="action",
-                    app="ai",
-                    action="analyze",
-                    config={"input": "previous_step.output"},
-                )
-            )
-            next_id += 1
-
-        if self._contains_any(lowered, ("gmail", "email", "e-mail", "mail")):
-            steps.append(
-                WorkflowStep(
-                    id=f"step_{next_id}",
-                    type="action",
-                    app="gmail",
-                    action="send_email",
-                    config={"to": "configure_recipient", "body": "previous_step.output"},
-                )
-            )
-            next_id += 1
-        elif self._contains_any(lowered, ("slack",)):
-            steps.append(
-                WorkflowStep(
-                    id=f"step_{next_id}",
-                    type="action",
-                    app="slack",
-                    action="send_message",
-                    config={"channel": "configure_channel", "message": "previous_step.output"},
-                )
-            )
-            next_id += 1
-
-        if self._contains_any(lowered, ("spreadsheet", "google sheets", "sheets")):
-            steps.append(
-                WorkflowStep(
-                    id=f"step_{next_id}",
-                    type="action",
-                    app="google_sheets",
-                    action="append_row",
-                    config={"values": "previous_step.output"},
+                    app=app,
+                    action=operation,
+                    config=config,
+                    depends_on=[steps[-1].id],
+                    condition=condition,
                 )
             )
 
@@ -116,6 +56,8 @@ class Planner:
         return WorkflowPlan(
             name=name,
             request=request,
-            description=f"V1 workflow plan generated from: {request}",
+            description=f"V3 workflow plan generated from: {request}",
             steps=steps,
+            provider=intent.provider,
+            intent_confidence=intent.confidence,
         )
