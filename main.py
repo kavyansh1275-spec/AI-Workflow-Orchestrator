@@ -2,8 +2,8 @@ from core.orchestrator import Orchestrator
 
 
 def main() -> None:
-    print("AI Workflow Orchestrator - V5")
-    print("AI workflow intelligence + requirement analysis + provider optimization enabled.")
+    print("AI Workflow Orchestrator - V6")
+    print("AI decision-making + workflow generation + safe local execution enabled.")
     print("Type an automation request. Type 'exit' to quit.\n")
 
     orchestrator = Orchestrator()
@@ -20,6 +20,7 @@ def main() -> None:
             decision = orchestrator.decide(request)
             workflow = orchestrator.build(request)
             generated = orchestrator.generate(request)
+            execution = orchestrator.execute(request, dry_run=True)
 
             print("\nAI Decision:")
             print(decision)
@@ -27,6 +28,8 @@ def main() -> None:
             print(workflow.to_pretty_json())
             print("\nGenerated provider artifact (dry-run):")
             print(generated)
+            print("\nV6 Runtime Execution (dry-run):")
+            print(execution)
             print("\nDry-run deployment:")
             print(orchestrator.deploy(request, dry_run=True))
         except Exception as exc:
