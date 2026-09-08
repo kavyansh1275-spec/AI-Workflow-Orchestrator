@@ -2,13 +2,14 @@ from __future__ import annotations
 
 from core.deployer import Deployer
 from core.executor import Executor
+from core.generator import WorkflowGenerator
 from core.planner import Planner
 from core.provider_selector import ProviderSelector
 from models.workflow import WorkflowPlan
 
 
 class Orchestrator:
-    """V3 application service: understand -> plan -> provider -> validate."""
+    """V4 application service: understand -> plan -> generate -> deploy."""
 
     def __init__(
         self,
@@ -16,11 +17,13 @@ class Orchestrator:
         executor: Executor | None = None,
         provider_selector: ProviderSelector | None = None,
         deployer: Deployer | None = None,
+        generator: WorkflowGenerator | None = None,
     ) -> None:
         self.planner = planner or Planner()
         self.executor = executor or Executor()
         self.provider_selector = provider_selector or ProviderSelector()
         self.deployer = deployer or Deployer()
+        self.generator = generator or WorkflowGenerator()
 
     def build(self, request: str) -> WorkflowPlan:
         workflow = self.planner.plan(request)
@@ -53,6 +56,16 @@ class Orchestrator:
     def simulate(self, request: str) -> list[str]:
         workflow = self.build(request)
         return self.executor.run(workflow)
+
+    def generate(self, request: str) -> dict:
+        workflow = self.build(request)
+        artifact = self.generator.generate(workflow)
+        return {
+            "provider": workflow.provider,
+            "name": workflow.name,
+            "artifact": artifact,
+            "dry_run": True,
+        }
 
     def deploy(self, request: str, dry_run: bool = True) -> dict:
         workflow = self.build(request)
