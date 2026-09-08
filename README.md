@@ -1,6 +1,6 @@
 # AI Workflow Orchestrator
 
-V4 of an AI system that converts natural-language automation requests into structured, dependency-aware workflow plans, selects an automation provider, and generates provider-specific workflow artifacts.
+V6 of an AI system that converts natural-language automation requests into structured, dependency-aware workflow plans, selects an automation provider, generates provider-specific artifacts, and safely executes workflows in a deterministic local runtime.
 
 ## V1 foundation
 
@@ -41,6 +41,26 @@ V4 of an AI system that converts natural-language automation requests into struc
 - Expose generated artifacts through the orchestrator and CLI.
 - Keep generated workflows inactive/dry-run only; no external provider API is called.
 
+## V5 AI decision layer
+
+- Understand workflow intent and requirements.
+- Detect missing information that may need clarification.
+- Choose an automation provider based on workflow complexity.
+- Preserve an explicit user provider preference over automatic optimization.
+- Feed the decision back into workflow generation.
+- Keep the decision engine deterministic and credential-free.
+
+## V6 execution layer
+
+- Add a deterministic local workflow runtime.
+- Execute validated steps in dependency order.
+- Record per-step execution status and outputs.
+- Evaluate simple workflow conditions and safely skip steps when conditions are not met.
+- Produce an execution ID and structured execution report.
+- Reject live execution explicitly; V6 remains dry-run only.
+- Expose runtime execution through the orchestrator and CLI.
+- Validate the full V6 pipeline through GitHub Actions.
+
 ## Run
 
 ```bash
@@ -53,4 +73,4 @@ python main.py
 python -m unittest discover -s tests -v
 ```
 
-V4 generates portable provider artifacts locally. Real provider API deployment remains a later version.
+V6 adds a local execution engine but does not call external provider APIs. Real provider credentials and live deployment remain future work.
