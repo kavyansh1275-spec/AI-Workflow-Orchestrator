@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
+from core.exporter import RunExporter
 from core.orchestrator import Orchestrator
 from models.v10 import GateStatus, PipelineEvent, QualityGate, V10Run, V10Stage
 
@@ -13,8 +15,9 @@ class V10Engine:
     disabled unless a future credential-aware adapter is explicitly introduced.
     """
 
-    def __init__(self, orchestrator: Orchestrator | None = None) -> None:
+    def __init__(self, orchestrator: Orchestrator | None = None, exporter: RunExporter | None = None) -> None:
         self.orchestrator = orchestrator or Orchestrator()
+        self.exporter = exporter or RunExporter()
 
     def _event(self, stage: V10Stage, status: str, message: str, **metadata: Any) -> PipelineEvent:
         return PipelineEvent(stage=stage, status=status, message=message, metadata=metadata)
@@ -73,3 +76,7 @@ class V10Engine:
                 "supervision": supervision,
             },
         )
+
+    def export(self, run: V10Run, directory: str | Path = "artifacts") -> Path:
+        """Write a completed V10 run to a portable JSON artifact."""
+        return self.exporter.export(run, directory)
