@@ -1,87 +1,28 @@
 # AI Workflow Orchestrator
 
-V8 of an AI system that converts natural-language automation requests into structured, dependency-aware workflow plans, selects an automation provider, validates integration capabilities, generates provider-specific artifacts, safely executes workflows in a deterministic local runtime, and prepares production-style releases with deployment history and rollback support.
+V9 of an AI system that converts natural-language automation requests into structured, dependency-aware workflow plans, selects an automation provider, validates integrations, generates provider artifacts, safely executes workflows, prepares production-style releases, and autonomously supervises workflow health and recovery decisions.
 
-## V1 foundation
+## V9 autonomous management layer
 
-- Parse a user request into a workflow plan.
-- Represent triggers, actions, and workflow metadata.
-- Validate workflow structure.
-- Execute a provider-independent workflow simulation.
-- Keep n8n, Make, and Zapier integrations isolated.
+- Monitor workflow health from execution results.
+- Maintain workflow supervision state and consecutive failure counts.
+- Automatically decide between monitor, retry, and rollback actions.
+- Trigger rollback decisions after three consecutive reported failures.
+- Generate unique decision IDs, confidence scores, reasons, timestamps, and metadata.
+- Expose autonomous supervision through the orchestrator and CLI.
+- Keep all autonomous decisions deterministic and dry-run by default.
+- Do not perform live external provider actions automatically.
 
-## V2 provider layer
+## Previous versions
 
-- Detect an explicit n8n, Make, or Zapier provider from the request.
-- Fall back to a generic provider when no provider is requested.
-- Route provider deployments through a central registry.
-- Support safe dry-run deployment without external API calls or credentials.
-- Keep real provider API deployment deferred to a later version.
-
-## V3 intelligence layer
-
-- Normalize natural-language requests into structured workflow intent.
-- Detect triggers and multiple actions in a single request.
-- Preserve action order and add explicit step dependencies.
-- Detect simple conditional language such as `if ... then ...`.
-- Add intent confidence scoring.
-- Support additional common actions such as Notion and Discord message creation.
-- Expose intent analysis through the CLI and orchestrator.
-- Validate dependency references and reject self-dependencies.
-- Remain deterministic, offline, and safe-by-default with no API credentials required.
-
-## V4 workflow generation layer
-
-- Convert validated workflow plans into provider-specific artifacts.
-- Generate an n8n-style node and connection representation.
-- Generate a Make-style module representation with dependency numbers.
-- Generate a Zapier-style ordered step representation.
-- Preserve conditions, configuration, and dependencies in generated artifacts.
-- Keep generation deterministic and credential-free.
-- Expose generated artifacts through the orchestrator and CLI.
-- Keep generated workflows inactive/dry-run only; no external provider API is called.
-
-## V5 AI decision layer
-
-- Understand workflow intent and requirements.
-- Detect missing information that may need clarification.
-- Choose an automation provider based on workflow complexity.
-- Preserve an explicit user provider preference over automatic optimization.
-- Feed the decision back into workflow generation.
-- Keep the decision engine deterministic and credential-free.
-
-## V6 execution layer
-
-- Add a deterministic local workflow runtime.
-- Execute validated steps in dependency order.
-- Record per-step execution status and outputs.
-- Evaluate simple workflow conditions and safely skip steps when conditions are not met.
-- Produce an execution ID and structured execution report.
-- Reject live execution explicitly; V6 remains dry-run only.
-- Expose runtime execution through the orchestrator and CLI.
-
-## V7 integration expansion layer
-
-- Add a central, credential-free integration capability catalog.
-- Validate every workflow step against a known app/action capability.
-- Support expanded capabilities for Gmail, Slack, Discord, Notion, Google Sheets, Airtable, Telegram, webhooks, forms, schedules, and generic HTTP requests.
-- Track capability categories and required configuration fields.
-- Allow safe `configure_*` placeholders until a future configuration/credential layer exists.
-- Expose integration inspection and the complete capability map through the orchestrator.
-- Reject unsupported application capabilities before execution or generation.
-- Keep all integration intelligence deterministic and offline; no external API calls are made.
-
-## V8 production/deployment layer
-
-- Add development, staging, and production deployment environments.
-- Build a release plan from a validated workflow and generated provider artifact.
-- Generate a SHA-256 artifact fingerprint for release traceability.
-- Create unique release IDs and maintain in-memory deployment history.
-- Provide safe dry-run deployment planning with zero external API calls.
-- Provide local rollback and deployment health reporting.
-- Explicitly block live deployment until future credential-aware provider adapters are implemented.
-- Expose release planning, history, rollback, and health checks through the orchestrator.
-- Keep the entire V8 layer deterministic and safe-by-default.
+- **V1:** Workflow foundation and planning.
+- **V2:** Provider selection and dry-run deployment.
+- **V3:** Natural-language workflow intelligence.
+- **V4:** Provider-specific workflow generation.
+- **V5:** AI decision engine and provider optimization.
+- **V6:** Deterministic local execution runtime.
+- **V7:** Integration capability expansion and validation.
+- **V8:** Production-style releases, deployment history, health, and rollback.
 
 ## Run
 
@@ -95,4 +36,4 @@ python main.py
 python -m unittest discover -s tests -v
 ```
 
-V8 adds production-style release management while remaining credential-free and dry-run only. GitHub Actions environments can later provide protected staging/production gates, approvals, concurrency, and environment-scoped secrets when live deployment adapters are introduced. GitHub documents environments and deployment protection rules as the mechanism for controlling deployments. 
+V9 remains credential-free and safe-by-default. Autonomous decisions are recommendations/state transitions only; live provider execution is intentionally deferred to the final production versions.
