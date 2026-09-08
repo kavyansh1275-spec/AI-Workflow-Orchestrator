@@ -1,4 +1,4 @@
-name: V4 Validation
+name: V5 Validation
 
 on:
   push:
@@ -11,7 +11,7 @@ on:
 
 jobs:
   validate:
-    name: Validate V4
+    name: Validate V5
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -31,9 +31,9 @@ jobs:
       - name: Run unit tests
         run: python -m unittest discover -s tests -v
 
-      - name: Run V4 CLI smoke test
+      - name: Run V5 CLI smoke test
         shell: bash
         run: |
           printf '%s\n' \
-            "Build this in n8n: receive a webhook, analyze it with AI, send the result to Gmail, then post it to Slack." \
+            "Create an automation that receives a webhook, analyzes it with AI, emails the result, and posts it to Slack." \
             "exit" | python main.py
