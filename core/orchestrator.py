@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from core.autonomy import AutonomousManager
 from core.brain import WorkflowBrain
+from core.credentials import CredentialManager
 from core.deployer import Deployer
 from core.executor import Executor
 from core.generator import WorkflowGenerator
@@ -24,7 +25,8 @@ class Orchestrator:
                  provider_optimizer: ProviderOptimizer | None = None, runtime: WorkflowRuntime | None = None,
                  integration_manager: IntegrationManager | None = None,
                  production_deployer: ProductionDeployer | None = None,
-                 autonomy_manager: AutonomousManager | None = None) -> None:
+                 autonomy_manager: AutonomousManager | None = None,
+                 credential_manager: CredentialManager | None = None) -> None:
         self.planner = planner or Planner()
         self.executor = executor or Executor()
         self.provider_selector = provider_selector or ProviderSelector()
@@ -36,6 +38,7 @@ class Orchestrator:
         self.integration_manager = integration_manager or IntegrationManager()
         self.production_deployer = production_deployer or ProductionDeployer(self.generator, self.integration_manager)
         self.autonomy_manager = autonomy_manager or AutonomousManager()
+        self.credential_manager = credential_manager or CredentialManager()
 
     def build(self, request: str) -> WorkflowPlan:
         workflow = self.planner.plan(request)
@@ -77,6 +80,10 @@ class Orchestrator:
 
     def list_integrations(self) -> dict[str, list[str]]:
         return self.integration_manager.capabilities()
+
+    def credential_status(self) -> dict[str, dict[str, str | None]]:
+        """Return provider credential readiness without exposing secret values."""
+        return self.credential_manager.status()
 
     def simulate(self, request: str) -> list[str]:
         return self.executor.run(self.build(request))
