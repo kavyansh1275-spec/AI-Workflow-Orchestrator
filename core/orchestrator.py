@@ -10,6 +10,7 @@ from core.integration_manager import IntegrationManager
 from core.operations import AutonomousOperations
 from core.planner import Planner
 from core.production import ProductionDeployer
+from core.provider_lifecycle import ProviderLifecycleTester
 from core.provider_optimizer import ProviderOptimizer
 from core.provider_selector import ProviderSelector
 from core.provider_smoke import ProviderSmokeTester
@@ -30,7 +31,8 @@ class Orchestrator:
                  autonomy_manager: AutonomousManager | None = None,
                  credential_manager: CredentialManager | None = None,
                  operations: AutonomousOperations | None = None,
-                 smoke_tester: ProviderSmokeTester | None = None) -> None:
+                 smoke_tester: ProviderSmokeTester | None = None,
+                 lifecycle_tester: ProviderLifecycleTester | None = None) -> None:
         self.planner = planner or Planner()
         self.executor = executor or Executor()
         self.provider_selector = provider_selector or ProviderSelector()
@@ -45,6 +47,7 @@ class Orchestrator:
         self.credential_manager = credential_manager or CredentialManager()
         self.operations = operations or AutonomousOperations()
         self.smoke_tester = smoke_tester or ProviderSmokeTester(self.credential_manager)
+        self.lifecycle_tester = lifecycle_tester or ProviderLifecycleTester(self.credential_manager, self.generator)
 
     def build(self, request: str) -> WorkflowPlan:
         workflow = self.planner.plan(request)
@@ -95,6 +98,13 @@ class Orchestrator:
 
     def provider_smoke_tests(self) -> dict[str, dict]:
         return self.smoke_tester.run_all()
+
+    def provider_lifecycle_test(self, request: str) -> dict:
+        """Run an explicitly opt-in create-and-cleanup test against the chosen provider."""
+        return self.lifecycle_tester.create_and_cleanup(self.build(request)).model_dump(mode="json")
+
+    def provider_lifecycle_readiness(self, request: str) -> dict:
+        return self.lifecycle_tester.validate(self.build(request))
 
     def simulate(self, request: str) -> list[str]:
         return self.executor.run(self.build(request))
