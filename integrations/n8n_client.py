@@ -4,6 +4,7 @@ import json
 from collections.abc import Callable, Mapping
 from typing import Any
 from urllib.error import HTTPError, URLError
+from urllib.parse import quote
 from urllib.request import Request, urlopen
 
 
@@ -23,6 +24,15 @@ class N8nClient:
             raise ValueError("n8n base URL cannot be blank")
         if not self.api_key:
             raise ValueError("n8n API key cannot be blank")
+        if timeout <= 0:
+            raise ValueError("timeout must be greater than zero")
+
+    @staticmethod
+    def _id(value: str) -> str:
+        value = str(value).strip()
+        if not value:
+            raise ValueError("workflow_id cannot be blank")
+        return quote(value, safe="")
 
     def _request(self, method: str, path: str, payload: Mapping[str, Any] | None = None) -> dict[str, Any]:
         body = json.dumps(payload).encode("utf-8") if payload is not None else None
@@ -54,19 +64,19 @@ class N8nClient:
         return self._request("GET", f"/api/v1/workflows?limit={limit}")
 
     def get_workflow(self, workflow_id: str) -> dict[str, Any]:
-        return self._request("GET", f"/api/v1/workflows/{workflow_id}")
+        return self._request("GET", f"/api/v1/workflows/{self._id(workflow_id)}")
 
     def create_workflow(self, payload: Mapping[str, Any]) -> dict[str, Any]:
         return self._request("POST", "/api/v1/workflows", payload)
 
     def update_workflow(self, workflow_id: str, payload: Mapping[str, Any]) -> dict[str, Any]:
-        return self._request("PATCH", f"/api/v1/workflows/{workflow_id}", payload)
+        return self._request("PUT", f"/api/v1/workflows/{self._id(workflow_id)}", payload)
 
     def delete_workflow(self, workflow_id: str) -> dict[str, Any]:
-        return self._request("DELETE", f"/api/v1/workflows/{workflow_id}")
+        return self._request("DELETE", f"/api/v1/workflows/{self._id(workflow_id)}")
 
     def activate_workflow(self, workflow_id: str) -> dict[str, Any]:
-        return self._request("POST", f"/api/v1/workflows/{workflow_id}/activate")
+        return self._request("POST", f"/api/v1/workflows/{self._id(workflow_id)}/activate")
 
     def deactivate_workflow(self, workflow_id: str) -> dict[str, Any]:
-        return self._request("POST", f"/api/v1/workflows/{workflow_id}/deactivate")
+        return self._request("POST", f"/api/v1/workflows/{self._id(workflow_id)}/deactivate")
