@@ -15,15 +15,14 @@ from core.auth_store import AuthStore
 from core.orchestrator import Orchestrator
 from core.v10 import V10Engine
 
-
 ROOT = Path(__file__).resolve().parent
 orchestrator = Orchestrator()
 engine = V10Engine(orchestrator=orchestrator)
 store = AuthStore()
 app = FastAPI(
     title="AI Workflow Orchestrator",
-    version="14.0.0",
-    description="Authenticated multi-user control center with V14 autonomous multi-workflow project planning.",
+    version="15.0.0",
+    description="Authenticated autonomous automation control center with V15 planning, testing, monitoring and recovery.",
 )
 
 
@@ -45,7 +44,7 @@ def index() -> FileResponse:
 
 @app.get("/api/health")
 def health() -> dict[str, str]:
-    return {"status": "ok", "mode": "authenticated-safe-v14", "ui": "14.0.0"}
+    return {"status": "ok", "mode": "authenticated-safe-v15", "ui": "15.0.0"}
 
 
 @app.post("/api/auth/register", status_code=status.HTTP_201_CREATED)
@@ -127,13 +126,7 @@ def workflows(username: str = Depends(current_username)) -> list[dict[str, objec
 def analyze(body: RequestBody, _: str = Depends(current_username)) -> dict[str, Any]:
     try:
         workflow = orchestrator.build(body.request)
-        return {
-            "analysis": orchestrator.analyze(body.request),
-            "decision": orchestrator.decide(body.request),
-            "integration_intelligence": orchestrator.integration_intelligence(body.request),
-            "workflow": workflow.model_dump(mode="json"),
-            "integrations": orchestrator.inspect_integrations(body.request),
-        }
+        return {"analysis": orchestrator.analyze(body.request), "decision": orchestrator.decide(body.request), "integration_intelligence": orchestrator.integration_intelligence(body.request), "workflow": workflow.model_dump(mode="json"), "integrations": orchestrator.inspect_integrations(body.request)}
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -154,6 +147,14 @@ def multi_project(body: RequestBody, username: str = Depends(current_username)) 
         payload = orchestrator.build_multi_project(body.request, environment=body.environment)
         store.save_workflow(username, body.request, body.environment, json.dumps(payload), datetime.now(timezone.utc).isoformat())
         return payload
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/agent")
+def agent(body: RequestBody, _: str = Depends(current_username)) -> dict[str, Any]:
+    try:
+        return orchestrator.run_agent(body.request, environment=body.environment, authorize_live=body.live)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
