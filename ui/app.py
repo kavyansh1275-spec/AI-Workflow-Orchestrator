@@ -8,11 +8,17 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from core.orchestrator import Orchestrator
+from core.v10 import V10Engine
 
 
 ROOT = Path(__file__).resolve().parent
 orchestrator = Orchestrator()
-app = FastAPI(title="AI Workflow Orchestrator", version="8.0.0", description="Safe web interface for the workflow orchestration engine.")
+engine = V10Engine(orchestrator=orchestrator)
+app = FastAPI(
+    title="AI Workflow Orchestrator",
+    version="8.1.0",
+    description="Safe web control center for the workflow orchestration engine.",
+)
 
 
 class RequestBody(BaseModel):
@@ -27,7 +33,7 @@ def index() -> FileResponse:
 
 @app.get("/api/health")
 def health() -> dict[str, str]:
-    return {"status": "ok", "mode": "safe-dry-run"}
+    return {"status": "ok", "mode": "safe-dry-run", "ui": "8.1.0"}
 
 
 @app.get("/api/credentials")
@@ -40,13 +46,35 @@ def providers() -> dict[str, list[str]]:
     return orchestrator.list_integrations()
 
 
+@app.get("/api/integrations")
+def integrations() -> dict[str, list[str]]:
+    return orchestrator.list_integrations()
+
+
+@app.get("/api/operations")
+def operations() -> list[dict[str, Any]]:
+    return orchestrator.operation_history()
+
+
+@app.get("/api/releases")
+def releases() -> list[dict[str, Any]]:
+    return orchestrator.deployment_history()
+
+
+@app.get("/api/provider-tests")
+def provider_tests() -> dict[str, dict[str, Any]]:
+    return orchestrator.provider_smoke_tests()
+
+
 @app.post("/api/analyze")
 def analyze(body: RequestBody) -> dict[str, Any]:
     try:
+        workflow = orchestrator.build(body.request)
         return {
             "analysis": orchestrator.analyze(body.request),
             "decision": orchestrator.decide(body.request),
-            "workflow": orchestrator.build(body.request).model_dump(mode="json"),
+            "workflow": workflow.model_dump(mode="json"),
+            "integrations": orchestrator.inspect_integrations(body.request),
         }
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -55,19 +83,15 @@ def analyze(body: RequestBody) -> dict[str, Any]:
 @app.post("/api/run")
 def run(body: RequestBody) -> dict[str, Any]:
     try:
-        # The UI intentionally exposes only the safe V10 dry-run pipeline.
-        from core.v10 import V10Engine
-
-        result = V10Engine(orchestrator=orchestrator).run(
-            body.request,
-            environment=body.environment,
-            dry_run=True,
-        )
+        result = engine.run(body.request, environment=body.environment, dry_run=True)
         return result.model_dump(mode="json")
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-@app.get("/api/integrations")
-def integrations() -> dict[str, list[str]]:
-    return orchestrator.list_integrations()
+@app.post("/api/operate")
+def operate(body: RequestBody) -> dict[str, Any]:
+    try:
+        return orchestrator.operate(body.request, dry_run=True)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
