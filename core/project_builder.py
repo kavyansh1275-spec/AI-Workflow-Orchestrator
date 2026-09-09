@@ -18,6 +18,7 @@ class AutonomousProjectBuilder:
         if not request:
             raise ValueError("project request cannot be blank")
 
+        integration_intelligence = self.orchestrator.integration_intelligence(request)
         workflow = self.orchestrator.build(request)
         analysis = self.orchestrator.analyze(request)
         integrations = self.orchestrator.inspect_integrations(request)
@@ -28,12 +29,15 @@ class AutonomousProjectBuilder:
         supervision = self.orchestrator.supervise(request, execution=execution)
 
         digest = hashlib.sha256(request.encode("utf-8")).hexdigest()[:12]
+        gaps = list(integration_intelligence.get("gaps", []))
         readiness = {
             "safe_to_simulate": True,
             "live_deployment": False,
             "credentials": self.orchestrator.credential_status(),
             "provider": workflow.provider,
             "environment": environment,
+            "integration_intelligence_ready": bool(integration_intelligence.get("ready")),
+            "integration_gaps": gaps,
             "missing_integrations": [
                 item for item in integrations if item.get("status") not in {"available", "supported"}
             ],
@@ -45,11 +49,12 @@ class AutonomousProjectBuilder:
             provider=workflow.provider,
             confidence=workflow.intent_confidence,
             workflow=workflow.model_dump(mode="json"),
+            integration_intelligence=integration_intelligence,
             integrations=integrations,
             artifact=artifact,
             simulation=simulation,
             release=release,
             supervision=supervision,
             readiness=readiness,
-            status="ready_for_review",
+            status="ready_for_review" if not gaps else "needs_integration_review",
         )
