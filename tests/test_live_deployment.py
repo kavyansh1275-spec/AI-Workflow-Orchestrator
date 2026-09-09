@@ -10,9 +10,9 @@ from models.workflow import WorkflowPlan, WorkflowStep
 
 def workflow(provider: str = "n8n") -> WorkflowPlan:
     return WorkflowPlan(
-        request="V13 live deployment safety test",
-        description="Test a provider deployment safety gate.",
         name="V13 Live Deployment Test",
+        request="Test a safe V13 live deployment workflow.",
+        description="A test workflow used to validate V13 deployment safety gates.",
         provider=provider,
         steps=[
             WorkflowStep(id="trigger", type="trigger", app="webhook", action="receive_request"),
