@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 from core.autonomy import AutonomousManager
 from core.brain import WorkflowBrain
 from core.credentials import CredentialManager
@@ -19,9 +18,8 @@ from core.runtime import WorkflowRuntime
 from models.autonomy import WorkflowState
 from models.workflow import WorkflowPlan
 
-
 class Orchestrator:
-    """V21 application service for solution-to-workflow compilation."""
+    """V22 application service for solution-to-workflow construction and deployment."""
     def __init__(self, planner=None, executor=None, provider_selector=None, deployer=None, generator=None, brain=None, provider_optimizer=None, runtime=None, integration_manager=None, production_deployer=None, autonomy_manager=None, credential_manager=None, operations=None, smoke_tester=None, lifecycle_tester=None, live_deployer=None) -> None:
         self.planner=planner or Planner(); self.executor=executor or Executor(); self.provider_selector=provider_selector or ProviderSelector(); self.deployer=deployer or Deployer(); self.generator=generator or WorkflowGenerator(); self.brain=brain or WorkflowBrain(self.planner.intelligence); self.provider_optimizer=provider_optimizer or ProviderOptimizer(); self.runtime=runtime or WorkflowRuntime(); self.integration_manager=integration_manager or IntegrationManager(); self.production_deployer=production_deployer or ProductionDeployer(self.generator,self.integration_manager); self.autonomy_manager=autonomy_manager or AutonomousManager(); self.credential_manager=credential_manager or CredentialManager(); self.operations=operations or AutonomousOperations(); self.smoke_tester=smoke_tester or ProviderSmokeTester(self.credential_manager); self.lifecycle_tester=lifecycle_tester or ProviderLifecycleTester(self.credential_manager,self.generator); self.live_deployer=live_deployer or LiveDeploymentManager(self.credential_manager,self.generator)
     def build(self, request):
@@ -44,6 +42,12 @@ class Orchestrator:
         from core.control_loop import AutonomousControlLoop; return AutonomousControlLoop(self).run(request,environment=environment).model_dump(mode="json")
     def build_workflow(self, request):
         from core.workflow_builder import AutonomousWorkflowBuilder; return AutonomousWorkflowBuilder(self).build(request).model_dump(mode="json")
+    def deploy_workflow(self, request, environment="staging", live=False):
+        from core.workflow_deployment import AutonomousWorkflowDeployment; return AutonomousWorkflowDeployment(self).prepare(request,environment=environment,live=live).model_dump(mode="json")
+    def test_and_repair(self, request, max_attempts=3):
+        from core.workflow_repair import AutonomousWorkflowRepair; return AutonomousWorkflowRepair(self).run(request,max_attempts=max_attempts).model_dump(mode="json")
+    def build_final_workflow(self, request, environment="staging", live=False):
+        from core.final_workflow import FinalWorkflowPipeline; return FinalWorkflowPipeline(self).run(request,environment=environment,live=live).model_dump(mode="json")
     def integration_intelligence(self, request): return self.integration_manager.analyze_request(request)
     def validate(self, workflow: WorkflowPlan):
         if not workflow.steps: raise ValueError("workflow must contain at least one step")
