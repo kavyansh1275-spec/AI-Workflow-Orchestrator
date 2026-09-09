@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
@@ -16,7 +16,7 @@ orchestrator = Orchestrator()
 engine = V10Engine(orchestrator=orchestrator)
 app = FastAPI(
     title="AI Workflow Orchestrator",
-    version="8.1.0",
+    version="8.2.0",
     description="Safe web control center for the workflow orchestration engine.",
 )
 
@@ -33,7 +33,7 @@ def index() -> FileResponse:
 
 @app.get("/api/health")
 def health() -> dict[str, str]:
-    return {"status": "ok", "mode": "safe-dry-run", "ui": "8.1.0"}
+    return {"status": "ok", "mode": "safe-dry-run", "ui": "8.2.0"}
 
 
 @app.get("/api/credentials")
@@ -95,3 +95,27 @@ def operate(body: RequestBody) -> dict[str, Any]:
         return orchestrator.operate(body.request, dry_run=True)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.websocket("/ws/events")
+async def event_stream(websocket: WebSocket) -> None:
+    """Stream a completed safe V10 run as ordered UI events.
+
+    The engine itself remains synchronous and deterministic. The websocket gives the
+    browser a live event channel without exposing provider mutations or credentials.
+    """
+    await websocket.accept()
+    try:
+        payload = await websocket.receive_json()
+        body = RequestBody.model_validate(payload)
+        result = engine.run(body.request, environment=body.environment, dry_run=True)
+        await websocket.send_json({"type": "run_started", "status": result.status})
+        for event in result.events:
+            await websocket.send_json({"type": "event", "event": event.model_dump(mode="json")})
+        await websocket.send_json({"type": "run_completed", "result": result.model_dump(mode="json")})
+    except WebSocketDisconnect:
+        return
+    except Exception as exc:
+        await websocket.send_json({"type": "error", "message": str(exc)})
+    finally:
+        await websocket.close()
