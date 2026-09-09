@@ -12,13 +12,14 @@ from core.planner import Planner
 from core.production import ProductionDeployer
 from core.provider_optimizer import ProviderOptimizer
 from core.provider_selector import ProviderSelector
+from core.provider_smoke import ProviderSmokeTester
 from core.runtime import WorkflowRuntime
 from models.autonomy import WorkflowState
 from models.workflow import WorkflowPlan
 
 
 class Orchestrator:
-    """V9/V10 application service with autonomous operations management."""
+    """V9/V10 application service with autonomous operations and provider testing."""
 
     def __init__(self, planner: Planner | None = None, executor: Executor | None = None,
                  provider_selector: ProviderSelector | None = None, deployer: Deployer | None = None,
@@ -28,7 +29,8 @@ class Orchestrator:
                  production_deployer: ProductionDeployer | None = None,
                  autonomy_manager: AutonomousManager | None = None,
                  credential_manager: CredentialManager | None = None,
-                 operations: AutonomousOperations | None = None) -> None:
+                 operations: AutonomousOperations | None = None,
+                 smoke_tester: ProviderSmokeTester | None = None) -> None:
         self.planner = planner or Planner()
         self.executor = executor or Executor()
         self.provider_selector = provider_selector or ProviderSelector()
@@ -42,6 +44,7 @@ class Orchestrator:
         self.autonomy_manager = autonomy_manager or AutonomousManager()
         self.credential_manager = credential_manager or CredentialManager()
         self.operations = operations or AutonomousOperations()
+        self.smoke_tester = smoke_tester or ProviderSmokeTester(self.credential_manager)
 
     def build(self, request: str) -> WorkflowPlan:
         workflow = self.planner.plan(request)
@@ -87,6 +90,12 @@ class Orchestrator:
     def credential_status(self) -> dict[str, dict[str, str | None]]:
         return self.credential_manager.status()
 
+    def provider_smoke_test(self, provider: str) -> dict:
+        return self.smoke_tester.run(provider).model_dump(mode="json")
+
+    def provider_smoke_tests(self) -> dict[str, dict]:
+        return self.smoke_tester.run_all()
+
     def simulate(self, request: str) -> list[str]:
         return self.executor.run(self.build(request))
 
@@ -98,7 +107,6 @@ class Orchestrator:
         return self.runtime.run(self.build(request), dry_run=dry_run).model_dump()
 
     def operate(self, request: str, dry_run: bool = True) -> dict:
-        """Plan and safely operate a workflow with retry and recovery supervision."""
         return self.operations.run(self.build(request), dry_run=dry_run).model_dump()
 
     def operation_history(self) -> list[dict]:
