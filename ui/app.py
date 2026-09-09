@@ -22,8 +22,8 @@ engine = V10Engine(orchestrator=orchestrator)
 store = AuthStore()
 app = FastAPI(
     title="AI Workflow Orchestrator",
-    version="9.0.0",
-    description="Authenticated multi-user web control center for the workflow orchestration engine.",
+    version="11.0.0",
+    description="Authenticated multi-user control center with autonomous project building.",
 )
 
 
@@ -44,7 +44,7 @@ def index() -> FileResponse:
 
 @app.get("/api/health")
 def health() -> dict[str, str]:
-    return {"status": "ok", "mode": "authenticated-safe-dry-run", "ui": "9.0.0"}
+    return {"status": "ok", "mode": "authenticated-safe-dry-run", "ui": "11.0.0"}
 
 
 @app.post("/api/auth/register", status_code=status.HTTP_201_CREATED)
@@ -124,6 +124,23 @@ def analyze(body: RequestBody, _: str = Depends(current_username)) -> dict[str, 
             "workflow": workflow.model_dump(mode="json"),
             "integrations": orchestrator.inspect_integrations(body.request),
         }
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/project")
+def project(body: RequestBody, username: str = Depends(current_username)) -> dict[str, Any]:
+    """Build a complete safe automation project from one natural-language request."""
+    try:
+        payload = orchestrator.build_project(body.request, environment=body.environment)
+        store.save_workflow(
+            username,
+            body.request,
+            body.environment,
+            json.dumps(payload),
+            datetime.now(timezone.utc).isoformat(),
+        )
+        return payload
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
