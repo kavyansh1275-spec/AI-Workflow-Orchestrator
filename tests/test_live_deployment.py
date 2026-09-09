@@ -10,6 +10,8 @@ from models.workflow import WorkflowPlan, WorkflowStep
 
 def workflow(provider: str = "n8n") -> WorkflowPlan:
     return WorkflowPlan(
+        request="V13 live deployment safety test",
+        description="Test a provider deployment safety gate.",
         name="V13 Live Deployment Test",
         provider=provider,
         steps=[
