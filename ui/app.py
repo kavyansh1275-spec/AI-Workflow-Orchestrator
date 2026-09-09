@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -13,7 +12,7 @@ from core.auth_store import AuthStore
 from core.orchestrator import Orchestrator
 from core.v10 import V10Engine
 ROOT=Path(__file__).resolve().parent; orchestrator=Orchestrator(); engine=V10Engine(orchestrator=orchestrator); store=AuthStore()
-app=FastAPI(title="AI Workflow Orchestrator",version="20.0.0",description="Authenticated autonomous automation control center with V20 closed-loop intelligence.")
+app=FastAPI(title="AI Workflow Orchestrator",version="24.0.0",description="Authenticated solution-to-final-workflow automation control center.")
 class RequestBody(BaseModel):
     request:str=Field(min_length=1,max_length=4000); environment:str="staging"; live:bool=False
 class RegisterBody(BaseModel):
@@ -21,7 +20,7 @@ class RegisterBody(BaseModel):
 @app.get("/",include_in_schema=False)
 def index(): return FileResponse(ROOT/"static"/"index.html")
 @app.get("/api/health")
-def health(): return {"status":"ok","mode":"authenticated-safe-v20","ui":"20.0.0"}
+def health(): return {"status":"ok","mode":"authenticated-safe-v24","ui":"24.0.0"}
 @app.post("/api/auth/register",status_code=status.HTTP_201_CREATED)
 def register(body:RegisterBody):
     if not store.create_user(body.username,hash_password(body.password),datetime.now(timezone.utc).isoformat()): raise HTTPException(409,"Username already exists")
@@ -53,6 +52,14 @@ def deployment_plan(request:str,environment:str="staging",_:str=Depends(current_
 def control_loop(request:str,environment:str="staging",_:str=Depends(current_username)): return orchestrator.control_loop(request,environment=environment)
 @app.get("/api/live-deployment-readiness")
 def live_deployment_readiness(request:str,_:str=Depends(current_username)): return orchestrator.live_deployment_readiness(request)
+@app.get("/api/workflow-build")
+def workflow_build(request:str,_:str=Depends(current_username)): return orchestrator.build_workflow(request)
+@app.get("/api/workflow-deployment")
+def workflow_deployment(request:str,environment:str="staging",_:str=Depends(current_username)): return orchestrator.deploy_workflow(request,environment=environment,live=False)
+@app.get("/api/workflow-repair")
+def workflow_repair(request:str,_:str=Depends(current_username)): return orchestrator.test_and_repair(request)
+@app.get("/api/final-workflow")
+def final_workflow(request:str,environment:str="staging",live:bool=False,_:str=Depends(current_username)): return orchestrator.build_final_workflow(request,environment=environment,live=live)
 @app.get("/api/operations")
 def operations(_:str=Depends(current_username)): return orchestrator.operation_history()
 @app.get("/api/releases")
