@@ -14,7 +14,7 @@ class UiV3Tests(unittest.TestCase):
     def test_health_reports_ui_v3(self) -> None:
         response = self.client.get("/api/health")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["ui"], "8.2.0")
+        self.assertEqual(response.json()["ui"], "9.0.0")
 
     def test_event_websocket_streams_safe_run(self) -> None:
         with self.client.websocket_connect("/ws/events") as websocket:
