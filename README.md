@@ -17,11 +17,38 @@ V10 composes the capabilities built across V1-V9 into one deterministic pipeline
 
 Every V10 run receives a unique run ID, confidence score, timestamped pipeline events, quality-gate results, and a structured result containing the outputs of the previous layers.
 
+## Post-V10 Part 1 — Credential foundation
+
+The first production-hardening layer now provides a secure credential abstraction for future provider adapters:
+
+- Credentials are loaded from environment variables only.
+- Secrets are never written to the repository or persisted by the manager.
+- Provider readiness can be inspected without exposing secret values.
+- Secret values are masked when status is displayed.
+- Missing credentials produce actionable provider-specific errors.
+- Supported provider configuration keys are `N8N_API_KEY`, `MAKE_API_TOKEN`, and `ZAPIER_API_TOKEN`.
+- Optional provider base URLs are supported through `N8N_BASE_URL`, `MAKE_BASE_URL`, and `ZAPIER_BASE_URL`.
+
+Example local environment configuration:
+
+```text
+N8N_API_KEY=<set locally>
+N8N_BASE_URL=<your n8n API base URL>
+MAKE_API_TOKEN=<set locally>
+MAKE_BASE_URL=<your Make API base URL>
+ZAPIER_API_TOKEN=<set locally>
+ZAPIER_BASE_URL=<your Zapier API base URL>
+```
+
+Do **not** commit real credentials. GitHub's documentation explicitly warns against committing passwords or API keys to a repository. citeturn0search1
+
+The credential layer is intentionally separate from the provider adapters: it gives future n8n/Make/Zapier integrations a common credential contract without pretending that live API deployment is already implemented.
+
 ## Safety and deployment policy
 
 - V10 is dry-run by default.
-- No external provider API calls or credentials are required.
-- Live execution is explicitly blocked until credential-aware provider adapters are implemented.
+- No external provider API calls are required by the orchestration foundation.
+- Live execution remains explicitly blocked until credential-aware provider adapters are implemented and tested against the providers' current APIs.
 - Autonomous actions remain recommendations/state transitions rather than uncontrolled external actions.
 
 ## Previous versions
@@ -49,4 +76,4 @@ python main.py
 python -m unittest discover -s tests -v
 ```
 
-The project remains credential-free and safe-by-default. V10 is the complete orchestration foundation; real provider deployment requires explicit credential-aware adapters and deployment controls in a future production-hardening phase.
+The project remains safe-by-default. V10 is the complete orchestration foundation, and Part 1 establishes the credential boundary needed before real provider deployment work begins.
