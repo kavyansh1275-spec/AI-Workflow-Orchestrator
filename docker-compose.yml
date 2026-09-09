@@ -1,0 +1,16 @@
+services:
+  orchestrator:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      FASTAPI_ENV: production
+      JWT_SECRET: ${JWT_SECRET}
+      N8N_API_KEY: ${N8N_API_KEY:-}
+      N8N_BASE_URL: ${N8N_BASE_URL:-}
+      MAKE_API_TOKEN: ${MAKE_API_TOKEN:-}
+      MAKE_BASE_URL: ${MAKE_BASE_URL:-}
+      MAKE_TEAM_ID: ${MAKE_TEAM_ID:-}
+      ZAPIER_API_TOKEN: ${ZAPIER_API_TOKEN:-}
+      ZAPIER_BASE_URL: ${ZAPIER_BASE_URL:-}
+    restart: unless-stopped
