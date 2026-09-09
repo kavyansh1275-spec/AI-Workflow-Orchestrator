@@ -6,19 +6,34 @@ from models.workflow import WorkflowPlan
 
 
 class WorkflowGenerator:
-    """Generate provider-specific, credential-free workflow artifacts.
+    """Generate provider-specific workflow artifacts.
 
-    V4 converts the validated provider-independent workflow into an exportable
-    representation for n8n, Make, or Zapier. It never calls an external API.
+    Provider artifacts stay credential-free. Live adapters are responsible for
+    authentication and deployment; this layer only translates the workflow
+    model into provider-native structure.
     """
 
     SUPPORTED_PROVIDERS = {"n8n", "make", "zapier", "generic"}
+
+    _N8N_NODE_TYPES = {
+        "webhook": "n8n-nodes-base.webhook",
+        "schedule": "n8n-nodes-base.scheduleTrigger",
+        "form": "n8n-nodes-base.formTrigger",
+        "gmail": "n8n-nodes-base.gmail",
+        "slack": "n8n-nodes-base.slack",
+        "discord": "n8n-nodes-base.discord",
+        "notion": "n8n-nodes-base.notion",
+        "google_sheets": "n8n-nodes-base.googleSheets",
+        "airtable": "n8n-nodes-base.airtable",
+        "telegram": "n8n-nodes-base.telegram",
+        "http": "n8n-nodes-base.httpRequest",
+        "ai": "@n8n/n8n-nodes-langchain.openAi",
+    }
 
     def generate(self, workflow: WorkflowPlan) -> dict[str, Any]:
         provider = workflow.provider.lower()
         if provider not in self.SUPPORTED_PROVIDERS:
             raise ValueError(f"unsupported workflow provider: {workflow.provider}")
-
         if provider == "n8n":
             return self._n8n(workflow)
         if provider == "make":
@@ -35,12 +50,13 @@ class WorkflowGenerator:
                     "id": step.id,
                     "name": f"{step.app}: {step.action}",
                     "type": self._n8n_type(step),
+                    "typeVersion": self._n8n_type_version(step),
                     "position": [index * 240, 0],
                     "parameters": step.config,
                 }
             )
 
-        connections = {}
+        connections: dict[str, list[str]] = {}
         for step in workflow.steps:
             for dependency in step.depends_on:
                 connections.setdefault(dependency, []).append(step.id)
@@ -101,10 +117,14 @@ class WorkflowGenerator:
                 return index
         raise ValueError(f"unknown dependency: {step_id}")
 
-    @staticmethod
-    def _n8n_type(step: Any) -> str:
-        if step.type == "trigger":
-            return "n8n-nodes-base.webhook"
-        if step.app == "ai":
-            return "n8n-nodes-base.openAi"
+    @classmethod
+    def _n8n_type(cls, step: Any) -> str:
+        if step.app in cls._N8N_NODE_TYPES:
+            return cls._N8N_NODE_TYPES[step.app]
         return f"n8n-nodes-base.{step.app}"
+
+    @classmethod
+    def _n8n_type_version(cls, step: Any) -> int:
+        # Keep the default conservative. Provider-specific version negotiation
+        # can be added later without changing the workflow model.
+        return 1
