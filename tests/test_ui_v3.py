@@ -11,10 +11,10 @@ class UiV3Tests(unittest.TestCase):
     def setUp(self) -> None:
         self.client = TestClient(app)
 
-    def test_health_reports_ui_v3(self) -> None:
+    def test_health_reports_current_ui(self) -> None:
         response = self.client.get("/api/health")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["ui"], "9.0.0")
+        self.assertEqual(response.json()["ui"], "11.0.0")
 
     def test_event_websocket_streams_safe_run(self) -> None:
         with self.client.websocket_connect("/ws/events") as websocket:
@@ -34,10 +34,15 @@ class UiV3Tests(unittest.TestCase):
                     break
             self.assertGreaterEqual(len(events), 8)
 
+    def test_project_route_is_authenticated(self) -> None:
+        response = self.client.post("/api/project", json={"request": "Create a form to email workflow"})
+        self.assertEqual(response.status_code, 401)
+
     def test_no_live_mutation_routes_are_exposed(self) -> None:
         paths = {route.path for route in app.routes}
         self.assertNotIn("/api/deploy", paths)
         self.assertNotIn("/api/lifecycle", paths)
+        self.assertIn("/api/project", paths)
         self.assertIn("/ws/events", paths)
 
 
