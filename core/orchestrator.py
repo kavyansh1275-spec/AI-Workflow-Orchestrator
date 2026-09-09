@@ -7,6 +7,7 @@ from core.deployer import Deployer
 from core.executor import Executor
 from core.generator import WorkflowGenerator
 from core.integration_manager import IntegrationManager
+from core.operations import AutonomousOperations
 from core.planner import Planner
 from core.production import ProductionDeployer
 from core.provider_optimizer import ProviderOptimizer
@@ -17,7 +18,7 @@ from models.workflow import WorkflowPlan
 
 
 class Orchestrator:
-    """V9 application service: understand -> decide -> integrate -> execute -> release -> supervise."""
+    """V9/V10 application service with autonomous operations management."""
 
     def __init__(self, planner: Planner | None = None, executor: Executor | None = None,
                  provider_selector: ProviderSelector | None = None, deployer: Deployer | None = None,
@@ -26,7 +27,8 @@ class Orchestrator:
                  integration_manager: IntegrationManager | None = None,
                  production_deployer: ProductionDeployer | None = None,
                  autonomy_manager: AutonomousManager | None = None,
-                 credential_manager: CredentialManager | None = None) -> None:
+                 credential_manager: CredentialManager | None = None,
+                 operations: AutonomousOperations | None = None) -> None:
         self.planner = planner or Planner()
         self.executor = executor or Executor()
         self.provider_selector = provider_selector or ProviderSelector()
@@ -39,6 +41,7 @@ class Orchestrator:
         self.production_deployer = production_deployer or ProductionDeployer(self.generator, self.integration_manager)
         self.autonomy_manager = autonomy_manager or AutonomousManager()
         self.credential_manager = credential_manager or CredentialManager()
+        self.operations = operations or AutonomousOperations()
 
     def build(self, request: str) -> WorkflowPlan:
         workflow = self.planner.plan(request)
@@ -82,7 +85,6 @@ class Orchestrator:
         return self.integration_manager.capabilities()
 
     def credential_status(self) -> dict[str, dict[str, str | None]]:
-        """Return provider credential readiness without exposing secret values."""
         return self.credential_manager.status()
 
     def simulate(self, request: str) -> list[str]:
@@ -94,6 +96,19 @@ class Orchestrator:
 
     def execute(self, request: str, dry_run: bool = True) -> dict:
         return self.runtime.run(self.build(request), dry_run=dry_run).model_dump()
+
+    def operate(self, request: str, dry_run: bool = True) -> dict:
+        """Plan and safely operate a workflow with retry and recovery supervision."""
+        return self.operations.run(self.build(request), dry_run=dry_run).model_dump()
+
+    def operation_history(self) -> list[dict]:
+        return [report.model_dump() for report in self.operations.history()]
+
+    def operation(self, operation_id: str) -> dict:
+        return self.operations.get(operation_id).model_dump()
+
+    def classify_failure(self, error: str) -> str:
+        return self.operations.classify_failure(error).value
 
     def deploy(self, request: str, dry_run: bool = True) -> dict:
         return self.deployer.deploy(self.build(request), dry_run=dry_run)
