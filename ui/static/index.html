@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Workflow Orchestrator</title>
+  <style>
+    :root { font-family: Inter, system-ui, sans-serif; color-scheme: dark; }
+    body { margin: 0; background: #0b1020; color: #eef2ff; }
+    .shell { max-width: 1180px; margin: auto; padding: 32px 20px 60px; }
+    header { display:flex; justify-content:space-between; gap:20px; align-items:center; margin-bottom:28px; }
+    h1 { margin:0; font-size: clamp(28px, 4vw, 46px); }
+    .muted { color:#9aa7c7; }
+    .badge { padding:7px 11px; border:1px solid #33416b; border-radius:999px; color:#b9c8ff; }
+    .grid { display:grid; grid-template-columns: 1fr 1fr; gap:18px; }
+    .card { background:#121a31; border:1px solid #273455; border-radius:18px; padding:20px; box-shadow:0 12px 35px #0004; }
+    .wide { grid-column:1/-1; }
+    textarea, select, button { width:100%; box-sizing:border-box; border-radius:12px; border:1px solid #344267; background:#0b1124; color:#eef2ff; padding:13px; font:inherit; }
+    textarea { min-height:130px; resize:vertical; }
+    button { margin-top:12px; cursor:pointer; background:#1d4ed8; border-color:#3b82f6; font-weight:700; }
+    button:hover { filter:brightness(1.12); }
+    .row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    pre { white-space:pre-wrap; word-break:break-word; background:#080d1a; padding:15px; border-radius:12px; overflow:auto; max-height:600px; }
+    .status { display:flex; gap:10px; flex-wrap:wrap; }
+    .pill { padding:8px 10px; border-radius:10px; background:#1a2441; }
+    @media (max-width:760px) { .grid { grid-template-columns:1fr; } .wide { grid-column:auto; } .row { grid-template-columns:1fr; } header { align-items:flex-start; flex-direction:column; } }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <div><h1>AI Workflow Orchestrator</h1><div class="muted">Part 8 — control center</div></div>
+      <div class="badge" id="health">checking…</div>
+    </header>
+
+    <section class="grid">
+      <div class="card wide">
+        <h2>Build a workflow</h2>
+        <p class="muted">Describe what you want automated. The UI uses the safe dry-run pipeline; it does not expose live deployment.</p>
+        <textarea id="request" placeholder="Example: When a form is submitted, analyze the response with AI and send the result by email."></textarea>
+        <div class="row">
+          <label>Environment<select id="environment"><option>development</option><option selected>staging</option><option>production</option></select></label>
+          <div><button id="analyze">Analyze workflow</button><button id="run">Run safe simulation</button></div>
+        </div>
+      </div>
+
+      <div class="card"><h2>Provider readiness</h2><div id="credentials" class="status">Loading…</div></div>
+      <div class="card"><h2>Engine capabilities</h2><div id="providers" class="status">Loading…</div></div>
+
+      <div class="card wide"><h2>Result</h2><pre id="output">No run yet.</pre></div>
+    </section>
+  </main>
+<script>
+const $ = id => document.getElementById(id);
+async function get(path) { const r = await fetch(path); if (!r.ok) throw new Error(await r.text()); return r.json(); }
+async function post(path, body) { const r = await fetch(path, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)}); const data = await r.json(); if (!r.ok) throw new Error(data.detail || JSON.stringify(data)); return data; }
+function pills(target, items) { $(target).innerHTML = items.map(x => `<span class="pill">${x}</span>`).join(''); }
+async function refresh() {
+  try { $('health').textContent = (await get('/api/health')).status + ' • safe dry-run'; } catch(e) { $('health').textContent = 'offline'; }
+  try {
+    const c = await get('/api/credentials');
+    pills('credentials', Object.entries(c).map(([p,v]) => `${p}: ${v.status}`));
+    const caps = await get('/api/providers');
+    pills('providers', Object.keys(caps).map(p => `${p}: ${caps[p].length} capabilities`));
+  } catch(e) { $('credentials').textContent = e.message; }
+}
+$('analyze').onclick = async () => {
+  const request = $('request').value.trim(); if (!request) return;
+  $('output').textContent = 'Analyzing…';
+  try { $('output').textContent = JSON.stringify(await post('/api/analyze', {request}), null, 2); } catch(e) { $('output').textContent = 'Error: ' + e.message; }
+};
+$('run').onclick = async () => {
+  const request = $('request').value.trim(); if (!request) return;
+  $('output').textContent = 'Running safe simulation…';
+  try { $('output').textContent = JSON.stringify(await post('/api/run', {request, environment:$('environment').value}), null, 2); } catch(e) { $('output').textContent = 'Error: ' + e.message; }
+};
+refresh();
+</script>
+</body>
+</html>
