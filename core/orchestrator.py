@@ -21,7 +21,7 @@ from models.workflow import WorkflowPlan
 
 
 class Orchestrator:
-    """V15 application service with autonomous automation planning."""
+    """V16 application service with autonomous research and automation planning."""
 
     def __init__(self, planner: Planner | None = None, executor: Executor | None = None,
                  provider_selector: ProviderSelector | None = None, deployer: Deployer | None = None,
@@ -72,6 +72,10 @@ class Orchestrator:
     def run_agent(self, request: str, environment: str = "staging", authorize_live: bool = False) -> dict:
         from core.autonomous_agent import AutonomousAutomationAgent
         return AutonomousAutomationAgent(self).plan(request, environment=environment, authorize_live=authorize_live).model_dump(mode="json")
+
+    def research(self, request: str) -> dict:
+        from core.research import AutonomousResearchEngine
+        return AutonomousResearchEngine(self).research(request).model_dump(mode="json")
 
     def integration_intelligence(self, request: str) -> dict[str, object]:
         return self.integration_manager.analyze_request(request)
