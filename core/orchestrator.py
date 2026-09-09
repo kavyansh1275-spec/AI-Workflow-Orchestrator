@@ -63,6 +63,10 @@ class Orchestrator:
         from core.project_builder import AutonomousProjectBuilder
         return AutonomousProjectBuilder(self).build(request, environment=environment).model_dump(mode="json")
 
+    def integration_intelligence(self, request: str) -> dict[str, object]:
+        """Analyze a business request and recommend concrete catalog capabilities."""
+        return self.integration_manager.analyze_request(request)
+
     def validate(self, workflow: WorkflowPlan) -> None:
         if not workflow.steps:
             raise ValueError("workflow must contain at least one step")
