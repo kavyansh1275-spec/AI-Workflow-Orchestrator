@@ -14,6 +14,8 @@ class TestAutonomousMultiProjectBuilder(unittest.TestCase):
         self.assertGreaterEqual(len(project.workflows), 2)
         self.assertEqual(len(project.dependencies), len(project.workflows) - 1)
         self.assertEqual(project.workflows[1].depends_on, [project.workflows[0].workflow_id])
+        self.assertEqual(project.workflows[1].workflow["steps"][0]["type"], "trigger")
+        self.assertEqual(project.workflows[1].workflow["steps"][0]["app"], "webhook")
         self.assertTrue(project.shared_data["handoff"])
         self.assertTrue(project.monitoring["enabled"])
         self.assertTrue(project.recovery["enabled"])
