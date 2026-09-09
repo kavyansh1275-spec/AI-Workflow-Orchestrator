@@ -12,6 +12,12 @@ class AutonomousSolutionDesigner:
     def __init__(self, orchestrator: Orchestrator | None = None) -> None:
         self.orchestrator = orchestrator or Orchestrator()
 
+    @staticmethod
+    def _research_value(research, key: str, default):
+        if isinstance(research, dict):
+            return research.get(key, default)
+        return getattr(research, key, default)
+
     def design(self, request: str) -> SolutionBlueprint:
         request = request.strip()
         if not request:
@@ -41,9 +47,9 @@ class AutonomousSolutionDesigner:
                 }
             )
 
-        integrations = research.get("integrations", [])
-        risks = research.get("risks", [])
-        gaps = research.get("gaps", [])
+        integrations = self._research_value(research, "integrations", [])
+        risks = self._research_value(research, "risks", [])
+        gaps = self._research_value(research, "gaps", [])
 
         return SolutionBlueprint(
             solution_id=f"solution-{hashlib.sha256(request.encode()).hexdigest()[:12]}",
