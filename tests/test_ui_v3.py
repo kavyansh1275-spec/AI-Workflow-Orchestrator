@@ -5,7 +5,7 @@ from ui.app import app
 class UiV3Tests(unittest.TestCase):
     def setUp(self): self.client=TestClient(app)
     def test_health_reports_current_ui(self):
-        response=self.client.get("/api/health"); self.assertEqual(response.status_code,200); self.assertEqual(response.json()["ui"],"20.0.0")
+        response=self.client.get("/api/health"); self.assertEqual(response.status_code,200); self.assertEqual(response.json()["ui"],"24.0.0")
     def test_event_websocket_streams_safe_run(self):
         with self.client.websocket_connect("/ws/events") as websocket:
             websocket.send_json({"request":"When a form is submitted, send an email notification","environment":"staging"}); first=websocket.receive_json(); self.assertEqual(first["type"],"run_started")
@@ -18,10 +18,13 @@ class UiV3Tests(unittest.TestCase):
     def test_new_intelligence_routes_are_authenticated(self):
         for path in ["/api/research","/api/solution","/api/validation","/api/deployment-plan","/api/control-loop"]:
             response=self.client.get(path,params={"request":"Receive a webhook and notify Slack"}); self.assertEqual(response.status_code,401,path)
+    def test_v21_v24_routes_are_authenticated(self):
+        for path in ["/api/workflow-build","/api/workflow-deployment","/api/workflow-repair","/api/final-workflow"]:
+            response=self.client.get(path,params={"request":"Receive a webhook and notify Slack"}); self.assertEqual(response.status_code,401,path)
     def test_mutation_routes_are_authenticated(self):
         for path in ["/api/project","/api/multi-project","/api/agent","/api/deploy/live"]:
             response=self.client.post(path,json={"request":"Receive a webhook and notify Slack"}); self.assertEqual(response.status_code,401,path)
     def test_routes_exist(self):
         paths={route.path for route in app.routes}
-        for path in ["/api/research","/api/solution","/api/validation","/api/deployment-plan","/api/control-loop","/api/agent","/ws/events"]: self.assertIn(path,paths)
+        for path in ["/api/research","/api/solution","/api/validation","/api/deployment-plan","/api/control-loop","/api/agent","/api/workflow-build","/api/workflow-deployment","/api/workflow-repair","/api/final-workflow","/ws/events"]: self.assertIn(path,paths)
 if __name__=="__main__": unittest.main()
