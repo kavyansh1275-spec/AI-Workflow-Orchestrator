@@ -1,6 +1,5 @@
 import json
 import unittest
-from io import BytesIO
 from unittest.mock import patch
 
 from core.credentials import CredentialManager
@@ -69,6 +68,28 @@ class N8nTests(unittest.TestCase):
         self.assertEqual(seen["url"], "https://n8n.example.com/api/v1/workflows")
         self.assertEqual(seen["method"], "POST")
         self.assertEqual(seen["key"], "secret-key")
+
+    def test_client_quotes_workflow_id(self) -> None:
+        seen = {}
+
+        def opener(request, timeout):
+            seen["url"] = request.full_url
+            return FakeResponse({"id": "wf"})
+
+        client = N8nClient("https://n8n.example.com", "secret-key", opener=opener)
+        client.get_workflow("wf/with spaces")
+        self.assertEqual(seen["url"], "https://n8n.example.com/api/v1/workflows/wf%2Fwith%20spaces")
+
+    def test_update_uses_put(self) -> None:
+        seen = {}
+
+        def opener(request, timeout):
+            seen["method"] = request.method
+            return FakeResponse({"id": "wf_123"})
+
+        client = N8nClient("https://n8n.example.com", "secret-key", opener=opener)
+        client.update_workflow("wf_123", {"name": "updated"})
+        self.assertEqual(seen["method"], "PUT")
 
     def test_payload_uses_n8n_connection_shape(self) -> None:
         credentials = CredentialManager({"N8N_API_KEY": "secret", "N8N_BASE_URL": "https://n8n.example.com"})
