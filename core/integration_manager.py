@@ -1,22 +1,25 @@
 from __future__ import annotations
 
+from core.integration_intelligence import IntegrationIntelligence
 from integrations.catalog import IntegrationCatalog
 from models.workflow import WorkflowPlan
 
 
 class IntegrationManager:
-    """V7 integration intelligence and capability validation layer."""
+    """V7 capability validation plus V12 natural-language integration intelligence."""
 
-    def __init__(self, catalog: IntegrationCatalog | None = None) -> None:
+    def __init__(
+        self,
+        catalog: IntegrationCatalog | None = None,
+        intelligence: IntegrationIntelligence | None = None,
+    ) -> None:
         self.catalog = catalog or IntegrationCatalog()
+        self.intelligence = intelligence or IntegrationIntelligence(self.catalog)
 
     def validate_workflow(self, workflow: WorkflowPlan) -> None:
         for step in workflow.steps:
-            self.catalog.require(step.app, step.action)
             spec = self.catalog.require(step.app, step.action)
             missing = [field for field in spec.required_fields if field not in step.config]
-            # Placeholder configuration is intentionally allowed in V7. The planner
-            # can mark a value as configure_* until a future credential/config layer exists.
             missing = [field for field in missing if not str(step.config.get(field, "")).startswith("configure_")]
             if missing:
                 raise ValueError(
@@ -39,6 +42,9 @@ class IntegrationManager:
                 }
             )
         return result
+
+    def analyze_request(self, request: str) -> dict[str, object]:
+        return self.intelligence.analyze(request)
 
     def capabilities(self) -> dict[str, list[str]]:
         result: dict[str, list[str]] = {}
