@@ -59,7 +59,7 @@ def register(body: RegisterBody) -> dict[str, str]:
 @app.post("/api/auth/token")
 def token(form: OAuth2PasswordRequestForm = Depends()) -> dict[str, str]:
     user = store.get_user(form.username)
-    if not user or bool(user["disabled"]) or not verify_password(form.password, str(user["hashed_password"])),
+    if not user or bool(user["disabled"]) or not verify_password(form.password, str(user["hashed_password"])):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect username or password", headers={"WWW-Authenticate": "Bearer"})
     return {"access_token": create_access_token(form.username), "token_type": "bearer"}
 
