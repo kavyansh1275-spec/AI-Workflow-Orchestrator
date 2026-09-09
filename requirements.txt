@@ -3,3 +3,6 @@ fastapi>=0.115,<1.0
 uvicorn>=0.34,<1.0
 websockets>=13.0,<16.0
 httpx2>=0.0.1
+pyjwt>=2.10,<3.0
+pwdlib[argon2]>=0.2,<1.0
+python-multipart>=0.0.20,<1.0
