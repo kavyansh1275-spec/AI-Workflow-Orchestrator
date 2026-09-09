@@ -21,8 +21,8 @@ engine = V10Engine(orchestrator=orchestrator)
 store = AuthStore()
 app = FastAPI(
     title="AI Workflow Orchestrator",
-    version="15.0.0",
-    description="Authenticated autonomous automation control center with V15 planning, testing, monitoring and recovery.",
+    version="16.0.0",
+    description="Authenticated autonomous automation control center with V16 research intelligence.",
 )
 
 
@@ -44,7 +44,7 @@ def index() -> FileResponse:
 
 @app.get("/api/health")
 def health() -> dict[str, str]:
-    return {"status": "ok", "mode": "authenticated-safe-v15", "ui": "15.0.0"}
+    return {"status": "ok", "mode": "authenticated-safe-v16", "ui": "16.0.0"}
 
 
 @app.post("/api/auth/register", status_code=status.HTTP_201_CREATED)
@@ -90,6 +90,14 @@ def integrations(_: str = Depends(current_username)) -> dict[str, list[str]]:
 def integration_intelligence(request: str, _: str = Depends(current_username)) -> dict[str, object]:
     try:
         return orchestrator.integration_intelligence(request)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/api/research")
+def research(request: str, _: str = Depends(current_username)) -> dict[str, Any]:
+    try:
+        return orchestrator.research(request)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
