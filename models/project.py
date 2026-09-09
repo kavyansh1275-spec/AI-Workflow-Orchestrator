@@ -13,6 +13,7 @@ class ProjectPlan(BaseModel):
     provider: str
     confidence: float
     workflow: dict[str, Any]
+    integration_intelligence: dict[str, Any] = Field(default_factory=dict)
     integrations: list[dict[str, Any]] = Field(default_factory=list)
     artifact: dict[str, Any] = Field(default_factory=dict)
     simulation: list[str] = Field(default_factory=list)
@@ -30,4 +31,5 @@ class ProjectPlan(BaseModel):
             "status": self.status,
             "steps": len(self.workflow.get("steps", [])),
             "integrations": len(self.integrations),
+            "integration_gaps": len(self.integration_intelligence.get("gaps", [])),
         }
