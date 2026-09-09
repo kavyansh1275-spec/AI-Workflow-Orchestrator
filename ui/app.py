@@ -22,14 +22,15 @@ engine = V10Engine(orchestrator=orchestrator)
 store = AuthStore()
 app = FastAPI(
     title="AI Workflow Orchestrator",
-    version="12.0.0",
-    description="Authenticated multi-user control center with autonomous project building.",
+    version="13.0.0",
+    description="Authenticated multi-user control center with safe, credential-aware V13 live deployment.",
 )
 
 
 class RequestBody(BaseModel):
     request: str = Field(min_length=1, max_length=4000)
     environment: str = "staging"
+    live: bool = False
 
 
 class RegisterBody(BaseModel):
@@ -44,7 +45,7 @@ def index() -> FileResponse:
 
 @app.get("/api/health")
 def health() -> dict[str, str]:
-    return {"status": "ok", "mode": "authenticated-safe-dry-run", "ui": "12.0.0"}
+    return {"status": "ok", "mode": "authenticated-safe-v13", "ui": "13.0.0"}
 
 
 @app.post("/api/auth/register", status_code=status.HTTP_201_CREATED)
@@ -94,6 +95,14 @@ def integration_intelligence(request: str, _: str = Depends(current_username)) -
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
+@app.get("/api/live-deployment-readiness")
+def live_deployment_readiness(request: str, _: str = Depends(current_username)) -> dict[str, Any]:
+    try:
+        return orchestrator.live_deployment_readiness(request)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
 @app.get("/api/operations")
 def operations(_: str = Depends(current_username)) -> list[dict[str, Any]]:
     return orchestrator.operation_history()
@@ -135,6 +144,24 @@ def project(body: RequestBody, username: str = Depends(current_username)) -> dic
         payload = orchestrator.build_project(body.request, environment=body.environment)
         store.save_workflow(username, body.request, body.environment, json.dumps(payload), datetime.now(timezone.utc).isoformat())
         return payload
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/deploy/live")
+def deploy_live(body: RequestBody, _: str = Depends(current_username)) -> dict[str, Any]:
+    try:
+        return orchestrator.live_deploy(body.request, live=body.live)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/deploy/rollback/{deployment_id}")
+def rollback_live(deployment_id: str, _: str = Depends(current_username)) -> dict[str, Any]:
+    try:
+        return orchestrator.live_rollback(deployment_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
