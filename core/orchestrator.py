@@ -7,6 +7,7 @@ from core.deployer import Deployer
 from core.executor import Executor
 from core.generator import WorkflowGenerator
 from core.integration_manager import IntegrationManager
+from core.live_deployment import LiveDeploymentManager
 from core.operations import AutonomousOperations
 from core.planner import Planner
 from core.production import ProductionDeployer
@@ -20,7 +21,7 @@ from models.workflow import WorkflowPlan
 
 
 class Orchestrator:
-    """V9/V10 application service with autonomous operations and provider testing."""
+    """V13 application service with autonomous operations and live deployment."""
 
     def __init__(self, planner: Planner | None = None, executor: Executor | None = None,
                  provider_selector: ProviderSelector | None = None, deployer: Deployer | None = None,
@@ -32,7 +33,8 @@ class Orchestrator:
                  credential_manager: CredentialManager | None = None,
                  operations: AutonomousOperations | None = None,
                  smoke_tester: ProviderSmokeTester | None = None,
-                 lifecycle_tester: ProviderLifecycleTester | None = None) -> None:
+                 lifecycle_tester: ProviderLifecycleTester | None = None,
+                 live_deployer: LiveDeploymentManager | None = None) -> None:
         self.planner = planner or Planner()
         self.executor = executor or Executor()
         self.provider_selector = provider_selector or ProviderSelector()
@@ -48,6 +50,7 @@ class Orchestrator:
         self.operations = operations or AutonomousOperations()
         self.smoke_tester = smoke_tester or ProviderSmokeTester(self.credential_manager)
         self.lifecycle_tester = lifecycle_tester or ProviderLifecycleTester(self.credential_manager, self.generator)
+        self.live_deployer = live_deployer or LiveDeploymentManager(self.credential_manager, self.generator)
 
     def build(self, request: str) -> WorkflowPlan:
         workflow = self.planner.plan(request)
@@ -59,12 +62,10 @@ class Orchestrator:
         return workflow
 
     def build_project(self, request: str, environment: str = "staging") -> dict:
-        """Build a complete safe automation project from one natural-language goal."""
         from core.project_builder import AutonomousProjectBuilder
         return AutonomousProjectBuilder(self).build(request, environment=environment).model_dump(mode="json")
 
     def integration_intelligence(self, request: str) -> dict[str, object]:
-        """Analyze a business request and recommend concrete catalog capabilities."""
         return self.integration_manager.analyze_request(request)
 
     def validate(self, workflow: WorkflowPlan) -> None:
@@ -109,11 +110,19 @@ class Orchestrator:
         return self.smoke_tester.run_all()
 
     def provider_lifecycle_test(self, request: str) -> dict:
-        """Run an explicitly opt-in create-and-cleanup test against the chosen provider."""
         return self.lifecycle_tester.create_and_cleanup(self.build(request)).model_dump(mode="json")
 
     def provider_lifecycle_readiness(self, request: str) -> dict:
         return self.lifecycle_tester.validate(self.build(request))
+
+    def live_deploy(self, request: str, live: bool = False) -> dict:
+        return self.live_deployer.deploy(self.build(request), live=live).model_dump(mode="json")
+
+    def live_deployment_readiness(self, request: str) -> dict:
+        return self.live_deployer.readiness(self.build(request))
+
+    def live_rollback(self, deployment_id: str) -> dict:
+        return self.live_deployer.rollback(deployment_id).model_dump(mode="json")
 
     def simulate(self, request: str) -> list[str]:
         return self.executor.run(self.build(request))
