@@ -58,6 +58,11 @@ class Orchestrator:
         self.integration_manager.validate_workflow(workflow)
         return workflow
 
+    def build_project(self, request: str, environment: str = "staging") -> dict:
+        """Build a complete safe automation project from one natural-language goal."""
+        from core.project_builder import AutonomousProjectBuilder
+        return AutonomousProjectBuilder(self).build(request, environment=environment).model_dump(mode="json")
+
     def validate(self, workflow: WorkflowPlan) -> None:
         if not workflow.steps:
             raise ValueError("workflow must contain at least one step")
