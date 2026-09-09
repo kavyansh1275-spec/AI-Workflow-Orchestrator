@@ -12,12 +12,10 @@ from models.provider_testing import ProviderSmokeTest, ProviderTestStatus
 
 
 class ProviderSmokeTester:
-    """Opt-in provider connectivity tests.
+    """Opt-in, read-only provider connectivity tests.
 
-    Tests never create, modify, activate, execute, or delete a provider workflow.
-    They only verify that configured credentials can reach the provider API and
-    return a readable response. Live mutation tests belong to a separately
-    approved integration-test workflow.
+    These tests never create, modify, activate, execute, or delete a workflow.
+    They only verify that configured credentials can reach a provider's read API.
     """
 
     def __init__(self, credentials: CredentialManager | None = None) -> None:
@@ -49,9 +47,12 @@ class ProviderSmokeTester:
                 checks = ["credentials", "base_url", "GET /api/v1/workflows"]
             elif provider == "make":
                 base_url = credential.base_url or os.getenv("MAKE_BASE_URL") or "https://eu1.make.com"
-                client = MakeClient(base_url=base_url, api_token=credential.api_key.get_secret_value(), timeout=timeout)
-                client.list_scenarios(team_id=int(os.getenv("MAKE_TEAM_ID", "0")))
-                checks = ["credentials", "base_url", "GET /api/v2/scenarios"]
+                team_id = int(os.getenv("MAKE_TEAM_ID", "0"))
+                if team_id <= 0:
+                    raise RuntimeError("MAKE_TEAM_ID must be set to a positive team ID for the Make smoke test")
+                client = MakeClient(base_url=base_url, api_token=credential.api_key.get_secret_value(), team_id=team_id, timeout=timeout)
+                client.list_scenarios(limit=1)
+                checks = ["credentials", "base_url", "team_id", "GET /api/v2/scenarios"]
             else:
                 base_url = credential.base_url or os.getenv("ZAPIER_BASE_URL") or "https://api.zapier.com"
                 client = ZapierClient(base_url=base_url, token=credential.api_key.get_secret_value(), timeout=timeout)
