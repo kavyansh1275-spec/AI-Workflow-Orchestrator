@@ -14,7 +14,7 @@ class UiV3Tests(unittest.TestCase):
     def test_health_reports_current_ui(self) -> None:
         response = self.client.get("/api/health")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["ui"], "11.0.0")
+        self.assertEqual(response.json()["ui"], "13.0.0")
 
     def test_event_websocket_streams_safe_run(self) -> None:
         with self.client.websocket_connect("/ws/events") as websocket:
@@ -38,10 +38,16 @@ class UiV3Tests(unittest.TestCase):
         response = self.client.post("/api/project", json={"request": "Create a form to email workflow"})
         self.assertEqual(response.status_code, 401)
 
-    def test_no_live_mutation_routes_are_exposed(self) -> None:
+    def test_live_routes_are_authenticated(self) -> None:
+        readiness = self.client.get("/api/live-deployment-readiness", params={"request": "Create a webhook to email workflow"})
+        self.assertEqual(readiness.status_code, 401)
+        deploy = self.client.post("/api/deploy/live", json={"request": "Create a webhook to email workflow", "live": True})
+        self.assertEqual(deploy.status_code, 401)
+
+    def test_no_unprotected_live_mutation_routes_are_exposed(self) -> None:
         paths = {route.path for route in app.routes}
-        self.assertNotIn("/api/deploy", paths)
-        self.assertNotIn("/api/lifecycle", paths)
+        self.assertIn("/api/deploy/live", paths)
+        self.assertIn("/api/deploy/rollback/{deployment_id}", paths)
         self.assertIn("/api/project", paths)
         self.assertIn("/ws/events", paths)
 
