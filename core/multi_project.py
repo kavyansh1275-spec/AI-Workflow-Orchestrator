@@ -20,13 +20,29 @@ class AutonomousMultiProjectBuilder:
         parts = [part.strip(" ,") for part in self._SEPARATORS.split(request) if part.strip(" ,")]
         if len(parts) <= 1:
             return [request]
-        stages: list[str] = []
-        for index, part in enumerate(parts):
-            if index == 0:
-                stages.append(part)
-            else:
-                stages.append(f"When the previous workflow completes, {part}")
+
+        stages: list[str] = [parts[0]]
+        # Downstream workflows need an explicit trigger so the existing planner
+        # can build a valid workflow instead of falling back to manual.start.
+        trigger_prefix = self._trigger_prefix(parts[0])
+        for part in parts[1:]:
+            stages.append(f"{trigger_prefix}, {part}")
         return stages[:6]
+
+    @staticmethod
+    def _trigger_prefix(first_stage: str) -> str:
+        text = first_stage.lower()
+        if re.search(r"\b(form|forms|form submission|form response)\b", text):
+            return "When a form submission is received"
+        if re.search(r"\b(webhook|http request|api request)\b", text):
+            return "When a webhook is received"
+        if re.search(r"\b(schedule|scheduled|every day|every week|daily|weekly)\b", text):
+            return "When the scheduled event runs"
+        if re.search(r"\b(new email|incoming email|email arrives)\b", text):
+            return "When an incoming email arrives"
+        if re.search(r"\b(new row|row added)\b", text):
+            return "When a new spreadsheet row is added"
+        return "When the previous workflow completes"
 
     @staticmethod
     def _shared_data(workflows: list[ProjectWorkflow]) -> dict[str, Any]:
