@@ -22,7 +22,7 @@ engine = V10Engine(orchestrator=orchestrator)
 store = AuthStore()
 app = FastAPI(
     title="AI Workflow Orchestrator",
-    version="11.0.0",
+    version="12.0.0",
     description="Authenticated multi-user control center with autonomous project building.",
 )
 
@@ -44,16 +44,12 @@ def index() -> FileResponse:
 
 @app.get("/api/health")
 def health() -> dict[str, str]:
-    return {"status": "ok", "mode": "authenticated-safe-dry-run", "ui": "11.0.0"}
+    return {"status": "ok", "mode": "authenticated-safe-dry-run", "ui": "12.0.0"}
 
 
 @app.post("/api/auth/register", status_code=status.HTTP_201_CREATED)
 def register(body: RegisterBody) -> dict[str, str]:
-    created = store.create_user(
-        body.username,
-        hash_password(body.password),
-        datetime.now(timezone.utc).isoformat(),
-    )
+    created = store.create_user(body.username, hash_password(body.password), datetime.now(timezone.utc).isoformat())
     if not created:
         raise HTTPException(status_code=409, detail="Username already exists")
     return {"username": body.username, "status": "created"}
@@ -63,11 +59,7 @@ def register(body: RegisterBody) -> dict[str, str]:
 def token(form: OAuth2PasswordRequestForm = Depends()) -> dict[str, str]:
     user = store.get_user(form.username)
     if not user or bool(user["disabled"]) or not verify_password(form.password, str(user["hashed_password"])):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect username or password", headers={"WWW-Authenticate": "Bearer"})
     return {"access_token": create_access_token(form.username), "token_type": "bearer"}
 
 
@@ -92,6 +84,14 @@ def providers(_: str = Depends(current_username)) -> dict[str, list[str]]:
 @app.get("/api/integrations")
 def integrations(_: str = Depends(current_username)) -> dict[str, list[str]]:
     return orchestrator.list_integrations()
+
+
+@app.get("/api/integration-intelligence")
+def integration_intelligence(request: str, _: str = Depends(current_username)) -> dict[str, object]:
+    try:
+        return orchestrator.integration_intelligence(request)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.get("/api/operations")
@@ -121,6 +121,7 @@ def analyze(body: RequestBody, _: str = Depends(current_username)) -> dict[str, 
         return {
             "analysis": orchestrator.analyze(body.request),
             "decision": orchestrator.decide(body.request),
+            "integration_intelligence": orchestrator.integration_intelligence(body.request),
             "workflow": workflow.model_dump(mode="json"),
             "integrations": orchestrator.inspect_integrations(body.request),
         }
@@ -130,16 +131,9 @@ def analyze(body: RequestBody, _: str = Depends(current_username)) -> dict[str, 
 
 @app.post("/api/project")
 def project(body: RequestBody, username: str = Depends(current_username)) -> dict[str, Any]:
-    """Build a complete safe automation project from one natural-language request."""
     try:
         payload = orchestrator.build_project(body.request, environment=body.environment)
-        store.save_workflow(
-            username,
-            body.request,
-            body.environment,
-            json.dumps(payload),
-            datetime.now(timezone.utc).isoformat(),
-        )
+        store.save_workflow(username, body.request, body.environment, json.dumps(payload), datetime.now(timezone.utc).isoformat())
         return payload
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -150,13 +144,7 @@ def run(body: RequestBody, username: str = Depends(current_username)) -> dict[st
     try:
         result = engine.run(body.request, environment=body.environment, dry_run=True)
         payload = result.model_dump(mode="json")
-        store.save_workflow(
-            username,
-            body.request,
-            body.environment,
-            json.dumps(payload),
-            datetime.now(timezone.utc).isoformat(),
-        )
+        store.save_workflow(username, body.request, body.environment, json.dumps(payload), datetime.now(timezone.utc).isoformat())
         return payload
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
