@@ -1,7 +1,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
-
 from .ai_provider import AIProviderManager
+from .business_intelligence_pipeline import BusinessIntelligencePipeline
 from .config import Config
 from .creative_pipeline import CreativePipeline
 from .database import Database
@@ -20,6 +20,7 @@ class JarvisBrain:
         self.planner=Planner(self.router)
         self.ai=AIProviderManager(self.config.provider,self.config.model)
         self.creative=CreativePipeline()
+        self.business=BusinessIntelligencePipeline()
 
     def _build_prompt(self,request,skills):
         skill_text=", ".join(skills) or "general reasoning"
@@ -31,6 +32,10 @@ class JarvisBrain:
     def _creative_request(self,request):
         text=request.lower()
         return any(k in text for k in ("blender","3d cartoon","3d animation","render a scene","create a character","animate a character"))
+
+    def _business_request(self,request):
+        text=request.lower()
+        return any(k in text for k in ("business","revenue","sales","profit","kpi","funnel","forecast","anomaly"))
 
     def _creative_plan(self,request):
         medium="animation" if any(k in request.lower() for k in ("animation","animate","cartoon","character")) else "3d"
@@ -48,7 +53,9 @@ class JarvisBrain:
             creative=self._creative_plan(request)
             lines += ["Creative Pipeline: READY",f"Medium: {creative.project.medium}",
                       f"Stages: {' -> '.join(creative.project.stages)}"]
-            if creative.render_plan: lines.append(f"Render command: {' '.join(creative.render_plan.command)}")
+        if self._business_request(request):
+            lines += ["Business Intelligence: READY",
+                      "Capabilities: KPI analysis, funnel analysis, anomaly detection, trend analysis, forecasting"]
         lines += ["Response:",response.text]
         if response.used_fallback: lines.append("Note: configured AI provider was unavailable; local fallback was used.")
         if self.config.dry_run: lines.append("Mode: dry-run (execution tools are not enabled yet).")
