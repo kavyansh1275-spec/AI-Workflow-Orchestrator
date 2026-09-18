@@ -1,7 +1,8 @@
 from __future__ import annotations
-
 from dataclasses import dataclass
-from typing import Callable
+from typing import Callable, Iterable
+
+from .memory import Memory, MemoryItem
 
 @dataclass(frozen=True)
 class Tool:
@@ -23,11 +24,11 @@ class AgentResult:
     stopped_reason: str
 
 class AgentEngine:
-    """Bounded, deterministic agent-loop foundation. Tools must be explicitly registered."""
-
-    def __init__(self, max_steps: int = 8):
+    """Bounded agent loop with optional memory-aware planning."""
+    def __init__(self, max_steps: int = 8, memory: Memory | None = None):
         self.max_steps = max(1, max_steps)
         self.tools: dict[str, Tool] = {}
+        self.memory = memory
 
     def register_tool(self, tool: Tool) -> None:
         self.tools[tool.name] = tool
@@ -35,11 +36,18 @@ class AgentEngine:
     def list_tools(self) -> tuple[str, ...]:
         return tuple(self.tools)
 
-    def plan(self, goal: str) -> tuple[str, ...]:
+    def plan(self, goal: str, memory_context: Iterable[MemoryItem] | None = None) -> tuple[str, ...]:
         text = goal.strip()
         if not text:
             return ()
-        return ("understand goal", "select registered tools", "execute bounded steps", "verify result", "record outcome")
+        context = list(memory_context) if memory_context is not None else (
+            self.memory.search(text, 5) if self.memory else []
+        )
+        steps = ["understand goal"]
+        if context:
+            steps.append("apply relevant memory context")
+        steps += ["select registered tools", "execute bounded steps", "verify result", "record outcome"]
+        return tuple(steps)
 
     def execute(self, goal: str, tool_calls: list[tuple[str, str]]) -> AgentResult:
         steps: list[AgentStep] = []
@@ -58,8 +66,13 @@ class AgentEngine:
             return AgentResult(goal, (), False, "no_tool_calls")
         if len(tool_calls) > self.max_steps:
             return AgentResult(goal, tuple(steps), False, "step_limit")
-        return AgentResult(goal, tuple(steps), self.verify(steps), "completed")
+        success = self.verify(steps)
+        if success and self.memory:
+            self.memory.remember(goal, list(self.tools), "decision")
+        return AgentResult(goal, tuple(steps), success, "completed")
 
     @staticmethod
     def verify(steps: list[AgentStep] | tuple[AgentStep, ...]) -> bool:
-        return bool(steps) and all(not s.result.startswith(("Tool error:", "Tool not registered")) for s in steps)
+        return bool(steps) and all(
+            not s.result.startswith(("Tool error:", "Tool not registered")) for s in steps
+        )
