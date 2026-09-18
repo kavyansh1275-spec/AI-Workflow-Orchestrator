@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import ipaddress
 import re
+import socket
 from dataclasses import dataclass
 from html.parser import HTMLParser
 from urllib.parse import urlparse
@@ -40,21 +42,31 @@ class _TextParser(HTMLParser):
 
 
 class ResearchEngine:
-    """Small, dependency-free URL reader for future research orchestration."""
+    """Dependency-free URL reader with basic SSRF protection."""
 
     def __init__(self, timeout: float = 10.0, max_chars: int = 20000):
         self.timeout = timeout
         self.max_chars = max_chars
 
+    @staticmethod
+    def _validate_host(host: str) -> None:
+        normalized = host.lower().rstrip(".")
+        if normalized in {"localhost", "localhost.localdomain"}:
+            raise ValueError("Local hosts are not allowed")
+        try:
+            addresses = {ipaddress.ip_address(info[4][0]) for info in socket.getaddrinfo(normalized, None)}
+        except socket.gaierror as exc:
+            raise ValueError("Could not resolve research host") from exc
+        if any(address.is_private or address.is_loopback or address.is_link_local or address.is_reserved for address in addresses):
+            raise ValueError("Private or local research hosts are not allowed")
+
     def fetch(self, url: str) -> ResearchDocument:
         parsed = urlparse(url)
-        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        if parsed.scheme not in {"http", "https"} or not parsed.hostname:
             raise ValueError("Only absolute HTTP(S) URLs are supported")
+        self._validate_host(parsed.hostname)
 
-        request = Request(
-            url,
-            headers={"User-Agent": "JARVIS-Research/1.0"},
-        )
+        request = Request(url, headers={"User-Agent": "JARVIS-Research/1.0"})
         with urlopen(request, timeout=self.timeout) as response:
             content_type = response.headers.get("Content-Type", "")
             if "text/html" not in content_type:
