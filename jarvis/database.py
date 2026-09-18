@@ -20,6 +20,18 @@ class Database:
                 )
                 """
             )
+            columns = {
+                row[1]
+                for row in db.execute("PRAGMA table_info(memories)").fetchall()
+            }
+            if "category" not in columns:
+                db.execute(
+                    "ALTER TABLE memories ADD COLUMN category TEXT NOT NULL DEFAULT 'temporary'"
+                )
+            if "created_at" not in columns:
+                db.execute(
+                    "ALTER TABLE memories ADD COLUMN created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP"
+                )
             db.commit()
 
     def add(self, request: str, skills: str, category: str = "temporary") -> None:
