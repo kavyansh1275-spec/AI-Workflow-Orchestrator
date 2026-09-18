@@ -1,19 +1,15 @@
-import unittest
+import json, unittest
 from jarvis.creative_studio_engine import CreativeStudioEngine
-
 class TestCreativeStudioEngine(unittest.TestCase):
-    def setUp(self): self.engine = CreativeStudioEngine()
-    def test_project_types(self):
-        p = self.engine.create_project("Kids Cartoon", "animation")
-        self.assertIn("storyboard", p.stages)
-        self.assertEqual(self.engine.validate_project(p), ())
-    def test_asset(self):
-        a = self.engine.add_asset("Hero", "character", format="blend")
-        self.assertEqual(a.metadata["format"], "blend")
-    def test_invalid_medium(self):
-        with self.assertRaises(ValueError): self.engine.create_project("x", "unknown")
-    def test_workflows(self):
-        self.assertIn("render", self.engine.blender_workflow())
-        self.assertIn("export", self.engine.video_workflow())
-
-if __name__ == "__main__": unittest.main()
+    def setUp(self): self.e=CreativeStudioEngine(".")
+    def test_project_and_manifest(self):
+        p=self.e.create_project("Kids Cartoon","animation")
+        a=self.e.add_asset("Hero","character",format="blend")
+        data=json.loads(self.e.create_manifest(p,[a]))
+        self.assertEqual(data["medium"],"animation"); self.assertEqual(data["assets"][0]["name"],"Hero")
+    def test_render_plan(self):
+        r=self.e.plan_blender_render("scene.blend","render/frame")
+        self.assertIn("-b",r.command); self.assertTrue(r.dry_run)
+    def test_invalid(self):
+        with self.assertRaises(ValueError): self.e.create_project("x","unknown")
+if __name__=="__main__": unittest.main()
