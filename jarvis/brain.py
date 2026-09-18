@@ -1,7 +1,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from .ai_provider import AIProviderManager
-from .business_intelligence_pipeline import BusinessIntelligencePipeline
+from .business_intelligence_pipeline_v2 import BusinessIntelligencePipelineV2
 from .config import Config
 from .creative_pipeline import CreativePipeline
 from .database import Database
@@ -20,7 +20,7 @@ class JarvisBrain:
         self.planner=Planner(self.router)
         self.ai=AIProviderManager(self.config.provider,self.config.model)
         self.creative=CreativePipeline()
-        self.business=BusinessIntelligencePipeline()
+        self.business=BusinessIntelligencePipelineV2()
 
     def _build_prompt(self,request,skills):
         skill_text=", ".join(skills) or "general reasoning"
@@ -41,6 +41,10 @@ class JarvisBrain:
         medium="animation" if any(k in request.lower() for k in ("animation","animate","cartoon","character")) else "3d"
         return self.creative.build("JARVIS Creative Project",medium,dry_run=True)
 
+    def _business_status(self):
+        return ("Business Intelligence: READY",
+                "Capabilities: data normalization, KPIs, funnel analysis, anomaly detection, trends, forecasting, insights, decision priorities")
+
     def handle(self,request):
         skills=self.router.route(request)
         plan=self.planner.build(request,skills,self.config.max_steps)
@@ -53,9 +57,7 @@ class JarvisBrain:
             creative=self._creative_plan(request)
             lines += ["Creative Pipeline: READY",f"Medium: {creative.project.medium}",
                       f"Stages: {' -> '.join(creative.project.stages)}"]
-        if self._business_request(request):
-            lines += ["Business Intelligence: READY",
-                      "Capabilities: KPI analysis, funnel analysis, anomaly detection, trend analysis, forecasting"]
+        if self._business_request(request): lines.extend(self._business_status())
         lines += ["Response:",response.text]
         if response.used_fallback: lines.append("Note: configured AI provider was unavailable; local fallback was used.")
         if self.config.dry_run: lines.append("Mode: dry-run (execution tools are not enabled yet).")
