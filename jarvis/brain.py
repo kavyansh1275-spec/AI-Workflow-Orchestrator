@@ -2,6 +2,7 @@ from dataclasses import dataclass
 
 from .ai_provider import AIProviderManager
 from .config import Config
+from .database import Database
 from .memory import Memory
 from .planner import Planner
 from .router import SkillRouter
@@ -12,17 +13,23 @@ class JarvisBrain:
     config: Config
 
     def __post_init__(self):
-        self.memory = Memory()
+        self.database = Database(self.config.memory_path)
+        self.memory = Memory(database=self.database)
         self.router = SkillRouter()
         self.planner = Planner(self.router)
         self.ai = AIProviderManager(self.config.provider, self.config.model)
 
     def _build_prompt(self, request: str, skills: list[str]) -> str:
         skill_text = ", ".join(skills) or "general reasoning"
+        recent = self.memory.recent(5)
+        context = "\n".join(
+            f"- {item.category}: {item.request}" for item in recent
+        ) or "- no prior context"
         return (
             "You are JARVIS, a modular AI assistant. "
             "Answer the user's task clearly and safely. "
             f"Activated skills: {skill_text}. "
+            f"Recent memory:\n{context}\n"
             f"User task: {request}"
         )
 
@@ -46,5 +53,4 @@ class JarvisBrain:
             lines.append("Note: configured AI provider was unavailable; local fallback was used.")
         if self.config.dry_run:
             lines.append("Mode: dry-run (execution tools are not enabled yet).")
-        return "
-".join(lines)
+        return "\n".join(lines)
