@@ -4,6 +4,7 @@ from .ai_provider import AIProviderManager
 from .business_intelligence_pipeline_v2 import BusinessIntelligencePipelineV2
 from .event_automation_engine import EventAutomationEngine
 from .orchestration_pipeline import OrchestrationPipeline
+from .execution_coordinator import ExecutionCoordinator
 from .config import Config
 from .creative_pipeline import CreativePipeline
 from .database import Database
@@ -25,6 +26,7 @@ class JarvisBrain:
         self.business=BusinessIntelligencePipelineV2()
         self.automation=EventAutomationEngine(self.config.max_steps)
         self.orchestrator=OrchestrationPipeline(self.router,self.planner,self.config.max_steps)
+        self.coordinator=ExecutionCoordinator(self.orchestrator.orchestrator,self.config.max_steps)
 
     def _build_prompt(self,request,skills):
         skill_text=", ".join(skills) or "general reasoning"
@@ -58,7 +60,8 @@ class JarvisBrain:
         plan=orchestration.orchestration.plan
         self.memory.remember(request,skills)
         response=self.ai.generate(self._build_prompt(request,skills))
-        lines=[f"Intent: {plan.intent}",f"Skills: {', '.join(skills) or 'general'}",
+        orchestration_status = "Orchestration: VERIFIED" if orchestration.success else "Orchestration: REVIEW"
+        lines=[f"Intent: {plan.intent}",f"Skills: {', '.join(skills) or 'general'}",orchestration_status,
                f"AI: {response.provider}/{response.model}","Plan:"]
         lines.extend(f"{i}. {step}" for i,step in enumerate(plan.steps,1))
         if self._creative_request(request):
