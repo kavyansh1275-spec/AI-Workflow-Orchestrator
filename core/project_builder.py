@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import hashlib
+
+from core.project_artifacts import ProjectArtifactBuilder
 from typing import Any
 
 from core.orchestrator import Orchestrator
@@ -53,6 +55,10 @@ class AutonomousProjectBuilder:
             encoding="utf-8",
         )
 
+        artifacts = ProjectArtifactBuilder().build(
+            workflow.name, request, workflow.model_dump(mode="json")
+        )
+
         return ProjectPlan(
             project_id=f"project-{digest}",
             name=workflow.name,
@@ -67,5 +73,6 @@ class AutonomousProjectBuilder:
             release=release,
             supervision=supervision,
             readiness=readiness,
+            artifacts=artifacts,
             status="ready_for_review" if not gaps else "needs_integration_review",
         )
