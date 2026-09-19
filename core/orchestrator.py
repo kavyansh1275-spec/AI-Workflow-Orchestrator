@@ -46,7 +46,8 @@ class Orchestrator:
                 if (app is None or step.app == app) and (action is None or step.action == action):
                     if not step.config.get(field) or str(step.config.get(field)).startswith("configure_"):
                         step.config[field] = answer
-                        break
+                        if item != "business owner email":
+                            break
         return updated
 
     def build_project(self, request, environment="staging"):
