@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from .ai_provider import AIProviderManager
 from .business_intelligence_pipeline_v2 import BusinessIntelligencePipelineV2
 from .event_automation_engine import EventAutomationEngine
+from .orchestration_pipeline import OrchestrationPipeline
 from .config import Config
 from .creative_pipeline import CreativePipeline
 from .database import Database
@@ -23,6 +24,7 @@ class JarvisBrain:
         self.creative=CreativePipeline()
         self.business=BusinessIntelligencePipelineV2()
         self.automation=EventAutomationEngine(self.config.max_steps)
+        self.orchestrator=OrchestrationPipeline(self.router,self.planner,self.config.max_steps)
 
     def _build_prompt(self,request,skills):
         skill_text=", ".join(skills) or "general reasoning"
@@ -51,8 +53,9 @@ class JarvisBrain:
         return ("Automation: READY", "Capabilities: tasks, workflows, schedules, triggers, conditions, event routing")
 
     def handle(self,request):
-        skills=self.router.route(request)
-        plan=self.planner.build(request,skills,self.config.max_steps)
+        orchestration=self.orchestrator.run(request)
+        skills=list(orchestration.orchestration.skills)
+        plan=orchestration.orchestration.plan
         self.memory.remember(request,skills)
         response=self.ai.generate(self._build_prompt(request,skills))
         lines=[f"Intent: {plan.intent}",f"Skills: {', '.join(skills) or 'general'}",
