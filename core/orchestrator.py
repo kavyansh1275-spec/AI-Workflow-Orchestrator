@@ -24,6 +24,25 @@ class Orchestrator:
         self.planner=planner or Planner(); self.executor=executor or Executor(); self.provider_selector=provider_selector or ProviderSelector(); self.deployer=deployer or Deployer(); self.generator=generator or WorkflowGenerator(); self.brain=brain or WorkflowBrain(self.planner.intelligence); self.provider_optimizer=provider_optimizer or ProviderOptimizer(); self.runtime=runtime or WorkflowRuntime(); self.integration_manager=integration_manager or IntegrationManager(); self.production_deployer=production_deployer or ProductionDeployer(self.generator,self.integration_manager); self.autonomy_manager=autonomy_manager or AutonomousManager(); self.credential_manager=credential_manager or CredentialManager(); self.operations=operations or AutonomousOperations(); self.smoke_tester=smoke_tester or ProviderSmokeTester(self.credential_manager); self.lifecycle_tester=lifecycle_tester or ProviderLifecycleTester(self.credential_manager,self.generator); self.live_deployer=live_deployer or LiveDeploymentManager(self.credential_manager,self.generator)
     def build(self, request):
         workflow=self.planner.plan(request); intent=self.brain.understand(request); provider,_=self.provider_optimizer.choose(request,intent); workflow=self.provider_selector.apply(workflow) if provider=="generic" else workflow.model_copy(update={"provider":provider}); self.validate(workflow); self.integration_manager.validate_workflow(workflow); return workflow
+    def apply_clarifications(self, workflow: WorkflowPlan, answers: dict[str, str]) -> WorkflowPlan:
+        replacements = {
+            "email recipient": ("gmail", "send_email", "to"),
+            "destination channel": (None, None, "channel"),
+            "Notion destination": ("notion", "create_page", "title"),
+        }
+        updated = workflow.model_copy(deep=True)
+        for item, answer in answers.items():
+            target = replacements.get(item)
+            if not target:
+                continue
+            app, action, field = target
+            for step in updated.steps:
+                if (app is None or step.app == app) and (action is None or step.action == action):
+                    if not step.config.get(field) or str(step.config.get(field)).startswith("configure_"):
+                        step.config[field] = answer
+                        break
+        return updated
+
     def build_project(self, request, environment="staging"):
         from core.project_builder import AutonomousProjectBuilder; return AutonomousProjectBuilder(self).build(request,environment=environment).model_dump(mode="json")
     def build_multi_project(self, request, environment="staging"):
