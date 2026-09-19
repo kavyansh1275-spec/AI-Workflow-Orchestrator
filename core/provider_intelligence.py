@@ -40,6 +40,7 @@ class ProviderIntelligence:
             "telegram.send_message": "n8n-nodes-base.telegram",
             "http.request": "n8n-nodes-base.httpRequest",
             "ai.analyze": "@n8n/n8n-nodes-langchain.openAi",
+            "orders.mark_processed": "n8n-nodes-base.code",
         },
         "make": {
             "webhook.receive_request": "webhooks.customWebhook",

@@ -52,3 +52,34 @@ def test_order_workflow_extracts_required_fields_and_maps_outputs():
     assert workflow.steps[2].config["values"]["order_id"] == "step_2.output.order_id"
     assert workflow.steps[3].config["to"] == "step_2.output.customer_email"
     assert workflow.steps[6].config["order_id"] == "step_2.output.order_id"
+
+
+SECOND_ORDER_REQUEST = (
+    "When a new order arrives, analyze the order, check whether the customer is new or returning, "
+    "record the order in the database, notify the relevant team, send the customer a personalized "
+    "confirmation, and create a follow-up task for orders that need attention."
+)
+
+
+def test_order_intelligence_creates_customer_status_and_follow_up_flow():
+    workflow = Planner().plan(SECOND_ORDER_REQUEST)
+
+    assert [(step.app, step.action) for step in workflow.steps] == [
+        ("webhook", "receive_request"),
+        ("ai", "analyze"),
+        ("airtable", "find_records"),
+        ("ai", "analyze"),
+        ("airtable", "create_record"),
+        ("slack", "send_message"),
+        ("gmail", "send_email"),
+        ("notion", "create_page"),
+    ]
+
+    by_id = {step.id: step for step in workflow.steps}
+    assert by_id["step_3"].config["query"] == "customer_email = step_2.output.customer_email"
+    assert by_id["step_4"].config["task"] == "classify customer as new or returning"
+    assert by_id["step_5"].config["fields"]["customer_status"] == "step_4.output"
+    assert by_id["step_6"].config["channel"] == "configure_team_channel"
+    assert by_id["step_7"].config["to"] == "step_2.output.customer_email"
+    assert by_id["step_8"].condition == "step_2.output.needs_attention == true"
+    assert by_id["step_8"].config["destination"] == "configure_follow_up_destination"
