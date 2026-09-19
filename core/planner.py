@@ -30,6 +30,7 @@ class Planner:
         needs_customer_status = self._has_any(text, (r"\bnew or returning\b", r"\bnew customer\b", r"\breturning customer\b"))
         needs_database = self._has_any(text, (r"\bdatabase\b", r"\brecord the order\b"))
         needs_team = self._has_any(text, (r"\brelevant team\b", r"\bnotify the team\b", r"\bnotify team\b"))
+        needs_owner_alert = self._has_any(text, (r"\bbusiness owner\b", r"\bowner alert\b", r"\balert the owner\b"))
         needs_confirmation = self._has_any(text, (r"\bconfirmation\b", r"\bconfirmation email\b", r"\bpersonalized confirmation\b"))
         needs_follow_up = self._has_any(text, (r"\bfollow[- ]up task\b", r"\bfollow up task\b", r"\bfollow-up\b"))
         needs_high_value = self._has_any(text, (r"\bhigh[- ]value\b", r"\babove ₹?\s*5[, ]?000\b", r"\babove 5000\b"))
@@ -154,6 +155,25 @@ class Planner:
                         "customer_name": "step_2.output.customer_name",
                         "order_id": "step_2.output.order_id",
                         "products": "step_2.output.products",
+                        "total_amount": "step_2.output.total_amount",
+                    },
+                },
+                depends_on=["step_2"],
+            ))
+            next_id += 1
+
+        if needs_owner_alert:
+            steps.append(WorkflowStep(
+                id=f"step_{next_id}",
+                type="action",
+                app="gmail",
+                action="send_email",
+                config={
+                    "to": "configure_business_owner_email",
+                    "body": {
+                        "template": "new_order_alert",
+                        "customer_name": "step_2.output.customer_name",
+                        "order_id": "step_2.output.order_id",
                         "total_amount": "step_2.output.total_amount",
                     },
                 },
