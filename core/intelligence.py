@@ -75,6 +75,10 @@ class WorkflowIntelligence:
             "google_sheets.append_row": r"\b(google sheets|spreadsheet|sheets)\b",
             "notion.create_page": r"\bnotion\b",
             "discord.send_message": r"\bdiscord\b",
+            "airtable.find_records": r"\b(check whether the customer|find customer|customer history|returning customer)\b",
+            "airtable.create_record": r"\b(record the order|record order|database)\b",
+            "notion.create_page": r"\b(follow[- ]up task|follow up task|task for orders)\b",
+            "slack.send_message": r"\b(relevant team|notify the team|notify team)\b",
         }
         for action, pattern in patterns.items():
             match = re.search(pattern, text)
