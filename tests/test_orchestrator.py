@@ -163,3 +163,34 @@ class OrchestratorTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+    def test_order_request_uses_derived_customer_email(self) -> None:
+        decision = self.orchestrator.decide(
+            "Create a workflow that triggers whenever a new order is received through a webhook, "
+            "sends a confirmation email to the customer, sends an alert to the business owner, "
+            "and saves the order to Google Sheets."
+        )
+
+        self.assertNotIn("email recipient", decision["requirements"]["missing"])
+        self.assertIn("business owner email", decision["requirements"]["missing"])
+        self.assertIn("Google Sheets destination", decision["requirements"]["missing"])
+
+    def test_structured_order_clarifications_are_applied(self) -> None:
+        workflow = self.orchestrator.build(
+            "When a new order arrives, record the order in the database, notify the relevant team, "
+            "and create a follow-up task for orders that need attention."
+        )
+        resolved = self.orchestrator.apply_clarifications(
+            workflow,
+            {
+                "order database": "Orders",
+                "team notification channel": "#orders",
+                "follow-up task destination": "Order Follow-ups",
+            },
+        )
+
+        by_id = {step.id: step for step in resolved.steps}
+        self.assertEqual(by_id["step_5"].config["base"], "Orders")
+        self.assertEqual(by_id["step_6"].config["channel"], "#orders")
+        self.assertEqual(by_id["step_8"].config["destination"], "Order Follow-ups")
