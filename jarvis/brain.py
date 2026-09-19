@@ -5,6 +5,7 @@ from .business_intelligence_pipeline_v2 import BusinessIntelligencePipelineV2
 from .event_automation_engine import EventAutomationEngine
 from .orchestration_pipeline import OrchestrationPipeline
 from .execution_coordinator import ExecutionCoordinator
+from .system_orchestrator import SystemOrchestrator
 from .config import Config
 from .creative_pipeline import CreativePipeline
 from .database import Database
@@ -27,6 +28,7 @@ class JarvisBrain:
         self.automation=EventAutomationEngine(self.config.max_steps)
         self.orchestrator=OrchestrationPipeline(self.router,self.planner,self.config.max_steps)
         self.coordinator=ExecutionCoordinator(self.orchestrator.orchestrator,self.config.max_steps)
+        self.system_orchestrator=SystemOrchestrator(self.router,self.planner,self.config.max_steps)
 
     def _build_prompt(self,request,skills):
         skill_text=", ".join(skills) or "general reasoning"
