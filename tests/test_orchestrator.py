@@ -136,5 +136,30 @@ class OrchestratorTests(unittest.TestCase):
         self.assertIn("gmail.send_email", trace[1])
 
 
+    def test_v10_clarification_answers_are_applied(self) -> None:
+        from core.v10 import V10Engine
+
+        engine = V10Engine(self.orchestrator)
+        run = engine.run(
+            "Create a workflow that sends an email when a new order arrives",
+            clarification_answers={"email recipient": "orders@example.com"},
+        )
+
+        step = run.result["workflow"]["steps"][1]
+        self.assertEqual(step["config"]["to"], "orders@example.com")
+
+    def test_v10_still_detects_missing_clarification(self) -> None:
+        from core.v10 import V10Engine
+
+        engine = V10Engine(self.orchestrator)
+        run = engine.run("Create a workflow that sends an email when a new order arrives")
+
+        self.assertEqual(
+            run.result["workflow"]["steps"][1]["config"]["to"],
+            "configure_recipient",
+        )
+        self.assertTrue(run.result["decision"]["needs_clarification"])
+
+
 if __name__ == "__main__":
     unittest.main()
