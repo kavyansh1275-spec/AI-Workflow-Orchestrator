@@ -1,4 +1,3 @@
-from __future__ import annotations
 from dataclasses import dataclass
 
 @dataclass(frozen=True)
@@ -14,8 +13,12 @@ class DebugResult:
     fix: str
 
 class DebugEngine:
-    def diagnose(self,error: Exception,location="") -> Diagnostic:
-        return Diagnostic(type(error).__name__,str(error),location)
-    def propose_fix(self,diagnostic: Diagnostic) -> DebugResult:
-        return DebugResult(diagnostic,f"Investigate {diagnostic.error_type} at {diagnostic.location or 'unknown location'}",
-                           f"Review the failing operation and validate the smallest safe change.")
+    def diagnose(self, error, location=""):
+        return Diagnostic(type(error).__name__, str(error), location)
+
+    def propose_fix(self, diagnostic):
+        return DebugResult(
+            diagnostic,
+            "Inspect the failing operation and its inputs.",
+            "Apply the smallest safe change, then verify again.",
+        )
