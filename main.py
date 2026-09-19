@@ -1,62 +1,41 @@
-from core.orchestrator import Orchestrator
-from core.v10 import V10Engine
+from __future__ import annotations
 
+import json
+import sys
 
-def _clarification_prompt(missing: str) -> str:
-    prompts = {
-        "email recipient": "What email address should receive the notification?",
-        "business owner email": "What email address should receive the business-owner alert?",
-        "destination channel": "Which channel should receive the message?",
-        "team notification channel": "Which Slack channel should receive the team alert?",
-        "Notion destination": "Which Notion destination should receive the page?",
-        "follow-up task destination": "Where should follow-up tasks be created?",
-        "Google Sheets destination": "Which Google Sheet should store the orders?",
-        "order database": "Which Airtable base or database should store the orders?",
-        "order source": "What webhook or order source should trigger the workflow?",
-    }
-    return prompts.get(missing, f"Please provide: {missing}.")
+from brain import JarvisBrain
 
 
 def main() -> None:
-    print("AI Workflow Orchestrator - V10")
-    print("Unified end-to-end AI workflow pipeline with quality gates, runtime, releases, and autonomous supervision.")
-    print("Safe dry-run mode is enabled. Type 'exit' to quit.\n")
+    print("JARVIS — AI Engineering & Operations")
+    print("Flow: interface → main.py → brain.py → skill/tool → execution → result")
+    print("Type 'exit' to quit. Safe external actions remain gated.\n")
 
-    engine = V10Engine(Orchestrator())
+    brain = JarvisBrain()
 
     while True:
-        request = input("> ").strip()
+        request = input("JARVIS > ").strip()
         if request.lower() in {"exit", "quit"}:
-            print("Goodbye!")
+            print("JARVIS: Goodbye!")
             break
         if not request:
             continue
-
         try:
-            decision = engine.orchestrator.decide(request)
-            missing = decision.get("requirements", {}).get("missing", [])
-            answers = {}
-            for item in missing:
-                answer = input(f"AI Workflow Orchestrator: {_clarification_prompt(item)} ").strip()
-                if not answer:
-                    raise ValueError(f"missing required clarification: {item}")
-                answers[item] = answer
-
-            run = engine.run(
+            result = brain.execute(
                 request,
-                environment="staging",
-                dry_run=True,
-                clarification_answers=answers,
+                emit=lambda event: print(
+                    f"[{event.stage.upper():10}] {event.status:10} {event.message}"
+                ),
             )
-            print("\nV10 Run:")
-            print(run.model_dump_json(indent=2))
+            print("\nRESULT:")
+            print(json.dumps(result, indent=2, default=str))
+            print()
         except Exception as exc:
-            print(f"Error: {exc}")
+            print(f"JARVIS ERROR: {type(exc).__name__}: {exc}")
 
 
 if __name__ == "__main__":
-    import sys
-
+    # CLI remains available for debugging; the normal entry point is the GUI.
     if "--cli" in sys.argv:
         main()
     else:
