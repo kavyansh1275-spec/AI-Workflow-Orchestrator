@@ -49,4 +49,10 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+
+    if "--cli" in sys.argv:
+        main()
+    else:
+        from gui import launch
+        launch()
