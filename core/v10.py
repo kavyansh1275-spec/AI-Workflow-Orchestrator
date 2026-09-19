@@ -39,6 +39,10 @@ class V10Engine:
         workflow = self.orchestrator.build(request)
         if clarification_answers:
             workflow = self.orchestrator.apply_clarifications(workflow, clarification_answers)
+            missing = decision.get("requirements", {}).get("missing", [])
+            remaining = [item for item in missing if item not in clarification_answers]
+            decision["requirements"]["missing"] = remaining
+            decision["needs_clarification"] = bool(remaining)
         events.append(self._event(V10Stage.PLAN, "completed", "Provider-independent workflow plan created.", steps=len(workflow.steps)))
 
         self.orchestrator.validate(workflow)
