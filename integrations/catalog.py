@@ -33,6 +33,7 @@ _INTEGRATIONS: tuple[IntegrationSpec, ...] = (
     IntegrationSpec("telegram", "send_message", "communication", ("chat_id", "message"), "Send a Telegram message."),
     IntegrationSpec("http", "request", "utility", ("url", "method"), "Make a generic HTTP request."),
     IntegrationSpec("ai", "analyze", "ai", description="Analyze or transform workflow data with an AI step."),
+    IntegrationSpec("orders", "mark_processed", "data", ("order_id",), "Mark an order as processed."),
 )
 
 
