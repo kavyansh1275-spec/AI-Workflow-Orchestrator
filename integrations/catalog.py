@@ -16,6 +16,7 @@ class IntegrationSpec:
 
 # V7 expands the supported application surface without making live API calls.
 _INTEGRATIONS: tuple[IntegrationSpec, ...] = (
+    IntegrationSpec("manual", "start", "trigger", description="Start a workflow manually from a user request."),
     IntegrationSpec("webhook", "receive_request", "trigger", description="Receive an inbound webhook request."),
     IntegrationSpec("forms", "receive_submission", "trigger", description="Receive a form submission."),
     IntegrationSpec("form", "receive_submission", "trigger", description="Receive a form submission."),
@@ -33,38 +34,3 @@ _INTEGRATIONS: tuple[IntegrationSpec, ...] = (
     IntegrationSpec("http", "request", "utility", ("url", "method"), "Make a generic HTTP request."),
     IntegrationSpec("ai", "analyze", "ai", description="Analyze or transform workflow data with an AI step."),
 )
-
-
-class IntegrationCatalog:
-    """Read-only registry of supported V7 application capabilities."""
-
-    def __init__(self, specs: tuple[IntegrationSpec, ...] = _INTEGRATIONS) -> None:
-        self._specs = {(spec.app, spec.action): spec for spec in specs}
-
-    def resolve(self, app: str, action: str) -> IntegrationSpec | None:
-        return self._specs.get((app.strip().lower(), action.strip().lower()))
-
-    def require(self, app: str, action: str) -> IntegrationSpec:
-        spec = self.resolve(app, action)
-        if spec is None:
-            raise ValueError(f"unsupported integration capability: {app}.{action}")
-        return spec
-
-    def list_apps(self) -> list[str]:
-        return sorted({spec.app for spec in self._specs.values()})
-
-    def list_capabilities(self) -> list[str]:
-        return sorted(f"{spec.app}.{spec.action}" for spec in self._specs.values())
-
-    def describe(self, app: str | None = None) -> list[dict[str, object]]:
-        specs = self._specs.values() if app is None else (s for s in self._specs.values() if s.app == app.lower())
-        return [
-            {
-                "app": spec.app,
-                "action": spec.action,
-                "category": spec.category,
-                "required_fields": list(spec.required_fields),
-                "description": spec.description,
-            }
-            for spec in sorted(specs, key=lambda item: (item.app, item.action))
-        ]
