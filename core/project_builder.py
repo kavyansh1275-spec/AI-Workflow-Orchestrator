@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import hashlib
+
+from core.project_artifacts import ProjectArtifactBuilder
 from typing import Any
 
 from core.orchestrator import Orchestrator
@@ -42,6 +44,21 @@ class AutonomousProjectBuilder:
                 item for item in integrations if item.get("status") not in {"available", "supported"}
             ],
         }
+        # Expose concrete build artifacts for the central JARVIS brain.
+        from pathlib import Path
+        import json
+        project_dir = Path("generated_projects") / workflow.name.replace(" ", "-")
+        project_dir.mkdir(parents=True, exist_ok=True)
+        (project_dir / "JARVIS_PROJECT_REQUEST.txt").write_text(request, encoding="utf-8")
+        (project_dir / "workflow.json").write_text(
+            json.dumps(workflow.model_dump(mode="json"), indent=2),
+            encoding="utf-8",
+        )
+
+        artifacts = ProjectArtifactBuilder().build(
+            workflow.name, request, workflow.model_dump(mode="json")
+        )
+
         return ProjectPlan(
             project_id=f"project-{digest}",
             name=workflow.name,
@@ -56,5 +73,6 @@ class AutonomousProjectBuilder:
             release=release,
             supervision=supervision,
             readiness=readiness,
+            artifacts=artifacts,
             status="ready_for_review" if not gaps else "needs_integration_review",
         )

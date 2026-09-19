@@ -9,17 +9,17 @@ from models.requirements import WorkflowRequirements
 
 
 class WorkflowBrain:
-    """V5 decision layer built around a deterministic, provider-neutral fallback.
-
-    The brain exposes a stable interface for a future LLM backend without making
-    V5 depend on credentials or external network calls.
-    """
+    """V5 decision layer built around a deterministic, provider-neutral fallback."""
 
     def __init__(self, intelligence: WorkflowIntelligence | None = None) -> None:
         self.intelligence = intelligence or WorkflowIntelligence()
 
     def understand(self, request: str) -> WorkflowIntent:
         return self.intelligence.analyze(request)
+
+    @staticmethod
+    def _is_order_request(text: str) -> bool:
+        return re.search(r"\b(new order|new purchase|order arrives|purchase arrives)\b", text) is not None
 
     def requirements(self, request: str) -> WorkflowRequirements:
         intent = self.understand(request)
@@ -43,14 +43,30 @@ class WorkflowBrain:
             if re.search(pattern, text) and label not in data:
                 data.append(label)
 
-        if intent.trigger == "manual.start":
-            missing.append("trigger source")
-        if "gmail.send_email" in intent.actions:
-            missing.append("email recipient")
-        if "slack.send_message" in intent.actions or "discord.send_message" in intent.actions:
-            missing.append("destination channel")
-        if "notion.create_page" in intent.actions:
-            missing.append("Notion destination")
+        if self._is_order_request(text):
+            data.extend(item for item in ("customer details", "order details") if item not in data)
+
+            if intent.trigger == "manual.start":
+                missing.append("order source")
+            if "google sheets" in text or "spreadsheet" in text or "sheets" in text:
+                missing.append("Google Sheets destination")
+            if "business owner" in text or "owner" in text:
+                missing.append("business owner email")
+            if "database" in text:
+                missing.append("order database")
+            if "relevant team" in text or "notify the team" in text or "notify team" in text:
+                missing.append("team notification channel")
+            if "follow-up" in text or "follow up" in text:
+                missing.append("follow-up task destination")
+        else:
+            if intent.trigger == "manual.start":
+                missing.append("trigger source")
+            if "gmail.send_email" in intent.actions:
+                missing.append("email recipient")
+            if "slack.send_message" in intent.actions or "discord.send_message" in intent.actions:
+                missing.append("destination channel")
+            if "notion.create_page" in intent.actions:
+                missing.append("Notion destination")
 
         confidence = min(1.0, intent.confidence + (0.05 if data else 0.0))
         return WorkflowRequirements(
