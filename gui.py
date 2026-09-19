@@ -1,279 +1,146 @@
 from __future__ import annotations
 
 import json
+import queue
 import threading
 import tkinter as tk
-from tkinter import messagebox, ttk
-from typing import Callable
+from tkinter import ttk
 
-from core.orchestrator import Orchestrator
+from brain import BrainEvent, JarvisBrain
+from core.skill_registry import list_skills
 
 
 class ToolControlCenter(tk.Tk):
-    """Desktop control center for the AI Workflow Orchestrator.
-
-    Each tool is a clickable module. The modules call the existing orchestrator
-    services instead of duplicating business logic in the UI.
-    """
+    """JARVIS control center: every command is routed through brain.py."""
 
     TOOLS = (
-        ("🧠", "AI Brain", "Understand and plan requests", "brain"),
-        ("🔄", "Workflow Builder", "Create and inspect workflows", "workflow"),
-        ("🔍", "Research", "Research a business/automation idea", "research"),
-        ("🌐", "App Builder", "Generate an application plan", "app"),
-        ("🧪", "Test & Repair", "Validate and repair workflows", "repair"),
-        ("🚀", "Deployment", "Plan a safe deployment", "deploy"),
-        ("🔌", "Integrations", "Inspect available integrations", "integrations"),
-        ("🔐", "Credentials", "Check provider readiness", "credentials"),
+        ("🧠", "AI Brain", "Understand and route", "brain"),
+        ("🔄", "Workflow Builder", "Build automations", "workflow"),
+        ("🔍", "Research", "Research ideas and problems", "research"),
+        ("🌐", "App Builder", "Build software", "app"),
+        ("🧪", "Test & Repair", "Test and repair", "repair"),
+        ("🚀", "Deployment", "Prepare deployment", "deploy"),
+        ("🧩", "Skills", "View capabilities", "skills"),
+        ("🔌", "Integrations", "View integrations", "integrations"),
     )
 
-    def __init__(self, orchestrator: Orchestrator | None = None) -> None:
+    def __init__(self) -> None:
         super().__init__()
-        self.orchestrator = orchestrator or Orchestrator()
-        self.title("AI Business Operator — Control Center")
-        self.geometry("1180x760")
-        self.minsize(980, 650)
+        self.brain = JarvisBrain()
+        self.title("JARVIS — AI Engineering & Operations")
+        self.geometry("1280x820")
+        self.minsize(1050, 700)
         self.configure(bg="#0b1020")
+        self._style()
+        self._shell()
+        self.home()
 
-        self._configure_styles()
-        self._build_shell()
-        self.show_home()
+    def _style(self) -> None:
+        s = ttk.Style(self)
+        s.theme_use("clam")
+        s.configure("App.TFrame", background="#0b1020")
+        s.configure("Side.TFrame", background="#11182d")
+        s.configure("Title.TLabel", background="#0b1020", foreground="#f7f9ff", font=("Segoe UI", 22, "bold"))
+        s.configure("Sub.TLabel", background="#0b1020", foreground="#9aa8c7", font=("Segoe UI", 10))
+        s.configure("Nav.TButton", background="#11182d", foreground="#dce5ff", borderwidth=0, padding=10)
+        s.configure("Primary.TButton", background="#4f7cff", foreground="#ffffff", borderwidth=0, padding=10)
 
-    def _configure_styles(self) -> None:
-        style = ttk.Style(self)
-        style.theme_use("clam")
-        style.configure("App.TFrame", background="#0b1020")
-        style.configure("Sidebar.TFrame", background="#11182d")
-        style.configure("Card.TFrame", background="#151e35")
-        style.configure("Title.TLabel", background="#0b1020", foreground="#f7f9ff",
-                        font=("Segoe UI", 24, "bold"))
-        style.configure("Subtitle.TLabel", background="#0b1020", foreground="#9aa8c7",
-                        font=("Segoe UI", 11))
-        style.configure("CardTitle.TLabel", background="#151e35", foreground="#ffffff",
-                        font=("Segoe UI", 13, "bold"))
-        style.configure("CardText.TLabel", background="#151e35", foreground="#9aa8c7",
-                        font=("Segoe UI", 9))
-        style.configure("Nav.TButton", background="#11182d", foreground="#dce5ff",
-                        borderwidth=0, padding=(14, 11), font=("Segoe UI", 10, "bold"))
-        style.map("Nav.TButton", background=[("active", "#1d2947")])
-        style.configure("Primary.TButton", background="#4f7cff", foreground="#ffffff",
-                        borderwidth=0, padding=(16, 10), font=("Segoe UI", 10, "bold"))
-        style.map("Primary.TButton", background=[("active", "#6a90ff")])
-        style.configure("Tool.TButton", background="#151e35", foreground="#ffffff",
-                        borderwidth=0, padding=14, font=("Segoe UI", 11, "bold"))
-        style.map("Tool.TButton", background=[("active", "#202d4d")])
-        style.configure("TEntry", fieldbackground="#11182d", foreground="#ffffff",
-                        insertcolor="#ffffff", padding=9)
-        style.configure("TCombobox", fieldbackground="#11182d", foreground="#ffffff")
-        style.configure("TNotebook", background="#0b1020", borderwidth=0)
-        style.configure("TLabel", background="#0b1020", foreground="#dce5ff")
-
-    def _build_shell(self) -> None:
-        root = ttk.Frame(self, style="App.TFrame")
-        root.pack(fill="both", expand=True)
-
-        sidebar = ttk.Frame(root, style="Sidebar.TFrame", width=235)
-        sidebar.pack(side="left", fill="y")
-        sidebar.pack_propagate(False)
-
-        brand = tk.Label(sidebar, text="⚡ AI OPERATOR", bg="#11182d", fg="#ffffff",
-                         font=("Segoe UI", 16, "bold"), pady=24)
-        brand.pack(fill="x")
-
-        home = ttk.Button(sidebar, text="⌂  Dashboard", style="Nav.TButton",
-                          command=self.show_home)
-        home.pack(fill="x", padx=10, pady=(4, 3))
-
-        for icon, name, desc, key in self.TOOLS:
-            ttk.Button(
-                sidebar,
-                text=f"{icon}  {name}",
-                style="Nav.TButton",
-                command=lambda k=key: self.show_tool(k),
-            ).pack(fill="x", padx=10, pady=2)
-
-        tk.Label(
-            sidebar,
-            text="V12 • Tool Control Center\nSafe dry-run by default",
-            bg="#11182d",
-            fg="#7080a5",
-            font=("Segoe UI", 9),
-            justify="left",
-            padx=18,
-            pady=20,
-        ).pack(side="bottom", fill="x")
-
-        self.content = ttk.Frame(root, style="App.TFrame")
-        self.content.pack(side="left", fill="both", expand=True, padx=32, pady=28)
+    def _shell(self) -> None:
+        root = ttk.Frame(self, style="App.TFrame"); root.pack(fill="both", expand=True)
+        side = ttk.Frame(root, style="Side.TFrame", width=220); side.pack(side="left", fill="y"); side.pack_propagate(False)
+        tk.Label(side, text="⚡ JARVIS", bg="#11182d", fg="#fff", font=("Segoe UI", 20, "bold"), pady=22).pack(fill="x")
+        ttk.Button(side, text="⌂  Dashboard", style="Nav.TButton", command=self.home).pack(fill="x", padx=10, pady=3)
+        for icon, name, _, key in self.TOOLS:
+            ttk.Button(side, text=f"{icon}  {name}", style="Nav.TButton",
+                       command=lambda k=key: self.tool(k)).pack(fill="x", padx=10, pady=2)
+        tk.Label(side, text="42 non-creative skills\nCreative Studio excluded",
+                 bg="#11182d", fg="#7080a5", font=("Segoe UI", 9), justify="left", padx=18, pady=18).pack(side="bottom", fill="x")
+        self.content = ttk.Frame(root, style="App.TFrame"); self.content.pack(fill="both", expand=True, padx=28, pady=24)
 
     def _clear(self) -> None:
-        for child in self.content.winfo_children():
-            child.destroy()
+        for child in self.content.winfo_children(): child.destroy()
 
     def _header(self, title: str, subtitle: str) -> None:
         ttk.Label(self.content, text=title, style="Title.TLabel").pack(anchor="w")
-        ttk.Label(self.content, text=subtitle, style="Subtitle.TLabel").pack(anchor="w", pady=(4, 22))
+        ttk.Label(self.content, text=subtitle, style="Sub.TLabel").pack(anchor="w", pady=(4, 18))
 
-    def _tool_card(self, parent: tk.Misc, icon: str, name: str, desc: str, key: str) -> None:
-        card = ttk.Frame(parent, style="Card.TFrame")
-        card.pack(side="left", fill="both", expand=True, padx=7, pady=7)
-        ttk.Label(card, text=f"{icon}  {name}", style="CardTitle.TLabel").pack(anchor="w", padx=16, pady=(18, 6))
-        ttk.Label(card, text=desc, style="CardText.TLabel", wraplength=220).pack(anchor="w", padx=16, pady=(0, 14))
-        ttk.Button(card, text="Open tool →", style="Tool.TButton",
-                   command=lambda: self.show_tool(key)).pack(fill="x", padx=14, pady=(0, 15))
-
-    def show_home(self) -> None:
-        self._clear()
-        self._header("AI Business Operator", "One interface for your AI tools. Click a tool to open it.")
-
-        intro = ttk.Frame(self.content, style="Card.TFrame")
-        intro.pack(fill="x", pady=(0, 18))
-        ttk.Label(intro, text="What do you want the AI to do?", style="CardTitle.TLabel").pack(
-            anchor="w", padx=18, pady=(16, 5)
-        )
-        ttk.Label(
-            intro,
-            text="Describe a task in normal language. The selected tool will use the existing orchestration engine.",
-            style="CardText.TLabel",
-        ).pack(anchor="w", padx=18, pady=(0, 14))
-
-        rows = [self.TOOLS[i:i + 3] for i in range(0, len(self.TOOLS), 3)]
-        for row in rows:
-            frame = ttk.Frame(self.content, style="App.TFrame")
-            frame.pack(fill="x")
-            for icon, name, desc, key in row:
-                self._tool_card(frame, icon, name, desc, key)
-
-    def _text_area(self, parent: tk.Misc, height: int = 13) -> tk.Text:
-        box = tk.Text(parent, height=height, bg="#11182d", fg="#e9efff",
-                      insertbackground="#ffffff", relief="flat", borderwidth=0,
-                      font=("Consolas", 10), padx=12, pady=10, wrap="word")
-        box.pack(fill="both", expand=True, pady=(8, 12))
+    def _box(self, parent: tk.Misc) -> tk.Text:
+        box = tk.Text(parent, bg="#11182d", fg="#e9efff", insertbackground="#fff",
+                      relief="flat", font=("Consolas", 9), padx=10, pady=10, wrap="word")
+        box.pack(fill="both", expand=True)
         return box
 
-    def _run_async(self, work: Callable[[], object], output: tk.Text, button: ttk.Button | None = None) -> None:
-        if button:
-            button.configure(state="disabled")
-        output.delete("1.0", "end")
-        output.insert("end", "Running...\n")
+    def _workspace(self, default: str = "Tell JARVIS what you want to build or do...") -> None:
+        card = ttk.Frame(self.content, style="App.TFrame"); card.pack(fill="both", expand=True)
+        entry = tk.Text(card, height=5, bg="#11182d", fg="#e9efff", insertbackground="#fff",
+                        relief="flat", font=("Consolas", 11), padx=12, pady=10)
+        entry.pack(fill="x", pady=(0, 10)); entry.insert("1.0", default)
 
-        def runner() -> None:
+        panes = ttk.Frame(card, style="App.TFrame"); panes.pack(fill="both", expand=True)
+        left = ttk.Frame(panes, style="App.TFrame"); left.pack(side="left", fill="both", expand=True, padx=(0, 6))
+        right = ttk.Frame(panes, style="App.TFrame"); right.pack(side="left", fill="both", expand=True, padx=(6, 0))
+        ttk.Label(left, text="CHAT", style="Sub.TLabel").pack(anchor="w")
+        ttk.Label(right, text="LIVE TERMINAL", style="Sub.TLabel").pack(anchor="w")
+        chat = self._box(left); terminal = self._box(right)
+        button = ttk.Button(card, text="▶ Run JARVIS", style="Primary.TButton",
+                            command=lambda: self._run(entry.get("1.0", "end").strip(), chat, terminal, button))
+        button.pack(fill="x", pady=(10, 0))
+
+    def _run(self, request: str, chat: tk.Text, terminal: tk.Text, button: ttk.Button) -> None:
+        if not request: return
+        chat.delete("1.0", "end"); terminal.delete("1.0", "end"); button.configure(state="disabled")
+        events: queue.Queue[BrainEvent] = queue.Queue()
+
+        def worker() -> None:
             try:
-                result = work()
-                payload = result if isinstance(result, str) else json.dumps(result, indent=2, default=str)
+                result = self.brain.execute(request, emit=events.put)
+                events.put(BrainEvent("result", "completed", "Final result ready.", {"result": result}))
             except Exception as exc:
-                payload = f"ERROR: {exc}"
-            self.after(0, lambda: self._finish(output, payload, button))
+                events.put(BrainEvent("error", "failed", str(exc), {"type": type(exc).__name__}))
+            events.put(BrainEvent("_done", "completed", ""))
 
-        threading.Thread(target=runner, daemon=True).start()
+        threading.Thread(target=worker, daemon=True).start()
 
-    def _finish(self, output: tk.Text, payload: str, button: ttk.Button | None) -> None:
-        output.delete("1.0", "end")
-        output.insert("end", payload)
-        if button:
-            button.configure(state="normal")
+        def pump() -> None:
+            done = False
+            while True:
+                try: event = events.get_nowait()
+                except queue.Empty: break
+                if event.stage == "_done": done = True; continue
+                terminal.insert("end", f"[{event.stage.upper():10}] {event.status:10} {event.message}\n")
+                terminal.see("end")
+                if event.stage == "result":
+                    chat.insert("end", json.dumps(event.data["result"], indent=2, default=str) + "\n")
+                else:
+                    chat.insert("end", event.message + "\n")
+            if done: button.configure(state="normal")
+            else: self.after(80, pump)
+        pump()
 
-    def show_tool(self, key: str) -> None:
-        pages = {
-            "brain": self._brain_page,
-            "workflow": self._workflow_page,
-            "research": self._research_page,
-            "app": self._app_page,
-            "repair": self._repair_page,
-            "deploy": self._deploy_page,
-            "integrations": self._integrations_page,
-            "credentials": self._credentials_page,
+    def home(self) -> None:
+        self._clear()
+        self._header("JARVIS Control Center", "interface → main.py → brain.py → skill/tool → execution → result")
+        self._workspace("Build me an application that ...")
+
+    def tool(self, key: str) -> None:
+        if key == "skills":
+            self._json_page("🧩 Skills", list_skills()); return
+        if key == "integrations":
+            self._json_page("🔌 Integrations", self.brain.orchestrator.list_integrations()); return
+        titles = {
+            "brain": ("🧠 AI Brain", "Understand and route any command."),
+            "workflow": ("🔄 Workflow Builder", "Build and simulate automations."),
+            "research": ("🔍 Research", "Research problems, customers and opportunities."),
+            "app": ("🌐 App Builder", "Build software projects."),
+            "repair": ("🧪 Test & Repair", "Test and repair workflows."),
+            "deploy": ("🚀 Deployment", "Prepare a deployment plan."),
         }
-        pages[key]()
+        title, subtitle = titles[key]
+        self._clear(); self._header(title, subtitle); self._workspace()
 
-    def _request_page(self, title: str, subtitle: str, action: str, worker: Callable[[str], object]) -> None:
-        self._clear()
-        self._header(title, subtitle)
-
-        card = ttk.Frame(self.content, style="Card.TFrame")
-        card.pack(fill="both", expand=True)
-        ttk.Label(card, text="Describe what you need", style="CardTitle.TLabel").pack(
-            anchor="w", padx=18, pady=(18, 4)
-        )
-        request = self._text_area(card, 7)
-        request.insert("1.0", "Build a workflow that ...")
-
-        result = self._text_area(card, 18)
-        button = ttk.Button(
-            card, text=action, style="Primary.TButton",
-            command=lambda: self._run_async(lambda: worker(request.get("1.0", "end").strip()), result, button),
-        )
-        button.pack(fill="x", padx=18, pady=(0, 10))
-        result.pack_forget()
-        result.pack(fill="both", expand=True, padx=18, pady=(4, 18))
-
-    def _brain_page(self) -> None:
-        self._request_page(
-            "🧠 AI Brain",
-            "Understand a request and show the selected provider, requirements, and clarification needs.",
-            "Analyze request",
-            self.orchestrator.decide,
-        )
-
-    def _workflow_page(self) -> None:
-        self._request_page(
-            "🔄 Workflow Builder",
-            "Turn natural language into a validated workflow plan.",
-            "Build workflow",
-            lambda request: self.orchestrator.build(request).model_dump(mode="json"),
-        )
-
-    def _research_page(self) -> None:
-        self._request_page(
-            "🔍 Research",
-            "Run the repository's research engine against a business or automation request.",
-            "Research",
-            self.orchestrator.research,
-        )
-
-    def _app_page(self) -> None:
-        self._request_page(
-            "🌐 App Builder",
-            "Create an autonomous project plan using the existing project builder.",
-            "Build app plan",
-            self.orchestrator.build_project,
-        )
-
-    def _repair_page(self) -> None:
-        self._request_page(
-            "🧪 Test & Repair",
-            "Test a workflow and attempt deterministic repairs.",
-            "Test & repair",
-            self.orchestrator.test_and_repair,
-        )
-
-    def _deploy_page(self) -> None:
-        self._request_page(
-            "🚀 Deployment",
-            "Create a safe deployment plan. Live external deployment remains disabled by default.",
-            "Plan deployment",
-            self.orchestrator.plan_deployment,
-        )
-
-    def _integrations_page(self) -> None:
-        self._clear()
-        self._header("🔌 Integrations", "See the capabilities currently registered with the orchestrator.")
-        result = self._text_area(self.content, 28)
-        try:
-            payload = self.orchestrator.list_integrations()
-            result.insert("end", json.dumps(payload, indent=2, default=str))
-        except Exception as exc:
-            result.insert("end", f"ERROR: {exc}")
-
-    def _credentials_page(self) -> None:
-        self._clear()
-        self._header("🔐 Credentials", "Check provider readiness without exposing secret values.")
-        result = self._text_area(self.content, 28)
-        try:
-            payload = self.orchestrator.credential_status()
-            result.insert("end", json.dumps(payload, indent=2, default=str))
-        except Exception as exc:
-            result.insert("end", f"ERROR: {exc}")
+    def _json_page(self, title: str, payload: object) -> None:
+        self._clear(); self._header(title, "Live registry from the JARVIS engine.")
+        box = self._box(self.content); box.insert("end", json.dumps(payload, indent=2, default=str))
 
 
 def launch() -> None:
