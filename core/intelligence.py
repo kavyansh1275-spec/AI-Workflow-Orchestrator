@@ -57,11 +57,13 @@ class WorkflowIntelligence:
         if re.search(r"\b(webhook|http request|api request)\b", text):
             return "webhook.receive_request"
         if re.search(r"\b(schedule|scheduled|every day|every week|daily|weekly)\b", text):
-            return "scheduler.run_on_schedule"
+            return "schedule.run"
         if re.search(r"\b(new email|incoming email|email arrives)\b", text):
             return "gmail.receive_email"
         if re.search(r"\b(new row|row added)\b", text):
             return "google_sheets.row_added"
+        if re.search(r"\b(new order|new purchase|order arrives|purchase arrives)\b", text):
+            return "webhook.receive_request"
         return "manual.start"
 
     def _actions(self, text: str) -> list[str]:
