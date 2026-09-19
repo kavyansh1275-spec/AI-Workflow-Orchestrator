@@ -1,0 +1,3 @@
+# JARVIS V2 optional AI provider
+# Local mode needs no third-party dependencies.
+google-genai>=1.0.0
