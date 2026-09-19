@@ -5,8 +5,14 @@ from core.v10 import V10Engine
 def _clarification_prompt(missing: str) -> str:
     prompts = {
         "email recipient": "What email address should receive the notification?",
+        "business owner email": "What email address should receive the business-owner alert?",
         "destination channel": "Which channel should receive the message?",
+        "team notification channel": "Which Slack channel should receive the team alert?",
         "Notion destination": "Which Notion destination should receive the page?",
+        "follow-up task destination": "Where should follow-up tasks be created?",
+        "Google Sheets destination": "Which Google Sheet should store the orders?",
+        "order database": "Which Airtable base or database should store the orders?",
+        "order source": "What webhook or order source should trigger the workflow?",
     }
     return prompts.get(missing, f"Please provide: {missing}.")
 
