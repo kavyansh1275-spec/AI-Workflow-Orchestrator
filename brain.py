@@ -89,9 +89,9 @@ class JarvisBrain:
 
     def _run_project_build(self, request: str, event: Callable[..., None]) -> dict[str, Any]:
         event("plan", "completed", "Project plan created.")
-        event("code", "running", "Building the application plan and project pipeline.")
+        event("code", "running", "Building the application plan and project artifacts.")
         result = self.orchestrator.build_project(request)
-        event("code", "completed", "Application project pipeline prepared.")
+        event("code", "completed", "Application project artifacts prepared.")
         event("test", "completed", "Project readiness checks completed.")
         return result
 
