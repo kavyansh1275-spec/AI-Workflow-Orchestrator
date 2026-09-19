@@ -22,7 +22,7 @@ class V10Engine:
     def _event(self, stage: V10Stage, status: str, message: str, **metadata: Any) -> PipelineEvent:
         return PipelineEvent(stage=stage, status=status, message=message, metadata=metadata)
 
-    def run(self, request: str, environment: str = "staging", dry_run: bool = True) -> V10Run:
+    def run(self, request: str, environment: str = "staging", dry_run: bool = True, clarification_answers: dict[str, str] | None = None) -> V10Run:
         request = request.strip()
         if not request:
             raise ValueError("request cannot be blank")
@@ -37,6 +37,8 @@ class V10Engine:
         events.append(self._event(V10Stage.DECIDE, "completed", "Provider and workflow strategy selected.", provider=decision.get("provider")))
 
         workflow = self.orchestrator.build(request)
+        if clarification_answers:
+            workflow = self.orchestrator.apply_clarifications(workflow, clarification_answers)
         events.append(self._event(V10Stage.PLAN, "completed", "Provider-independent workflow plan created.", steps=len(workflow.steps)))
 
         self.orchestrator.validate(workflow)
@@ -45,16 +47,16 @@ class V10Engine:
         gates.append(QualityGate(name="integrations", status=GateStatus.PASSED, message=f"All {len(integrations)} workflow capabilities are supported."))
         events.append(self._event(V10Stage.VALIDATE, "completed", "All V10 quality gates passed.", gate_count=len(gates)))
 
-        generated = self.orchestrator.generate(request)
+        generated = {"provider": workflow.provider, "name": workflow.name, "artifact": self.orchestrator.generator.generate(workflow), "dry_run": True}
         events.append(self._event(V10Stage.GENERATE, "completed", "Provider-specific artifact generated in dry-run mode."))
 
-        execution = self.orchestrator.execute(request, dry_run=True)
+        execution = self.orchestrator.runtime.run(workflow, dry_run=True).model_dump()
         events.append(self._event(V10Stage.EXECUTE, "completed", "Local runtime simulation completed safely."))
 
-        release = self.orchestrator.release(request, environment=environment, dry_run=True)
+        release = self.orchestrator.production_deployer.deploy(workflow, environment=environment, dry_run=True).model_dump()
         events.append(self._event(V10Stage.RELEASE, "completed", "Release plan created without external deployment."))
 
-        supervision = self.orchestrator.supervise(request, execution=execution)
+        supervision = self.orchestrator.autonomy_manager.supervise(workflow, execution=execution).model_dump()
         events.append(self._event(V10Stage.SUPERVISE, "completed", "Autonomous health supervision completed."))
 
         confidence = float(decision.get("confidence", workflow.intent_confidence))
