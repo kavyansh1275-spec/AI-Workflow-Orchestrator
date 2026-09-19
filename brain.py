@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable
 
 from core.orchestrator import Orchestrator
+from core.jarvis_terminal import JarvisTerminal, TerminalEvent
 
 
 @dataclass
@@ -23,6 +24,7 @@ class JarvisBrain:
 
     def __init__(self, orchestrator: Orchestrator | None = None) -> None:
         self.orchestrator = orchestrator or Orchestrator()
+        self.terminal = terminal or JarvisTerminal()
 
     def execute(
         self,
@@ -91,8 +93,22 @@ class JarvisBrain:
         event("plan", "completed", "Project plan created.")
         event("code", "running", "Building the application plan and project artifacts.")
         result = self.orchestrator.build_project(request)
-        event("code", "completed", "Application project artifacts prepared.")
-        event("test", "completed", "Project readiness checks completed.")
+        artifacts = result.get("artifacts", {})
+        event("code", "completed", "Real project files generated.", **artifacts)
+        project_dir = artifacts.get("project_dir")
+        if project_dir:
+            event("terminal", "command", f"python -m py_compile app.py (cwd={project_dir})")
+            root = __import__("pathlib").Path(project_dir)
+            app = root / "app.py"
+            if app.exists():
+                def forward(item: TerminalEvent) -> None:
+                    event("terminal", item.stream, item.line)
+                code = self.terminal.run(["python", "-m", "py_compile", "app.py"], emit=forward, timeout=60)
+                if code != 0:
+                    event("debug", "blocked", "Generated Python source failed validation.", exit_code=code)
+                    result["status"] = "build_validation_failed"
+                    return result
+            event("test", "completed", "Generated project validation passed.")
         return result
 
     @staticmethod
