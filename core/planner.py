@@ -187,6 +187,7 @@ class Planner:
                 app="notion",
                 action="create_page",
                 config={
+                    "destination": "configure_follow_up_destination",
                     "title": "Follow-up: step_2.output.order_id",
                     "content": {
                         "template": "order_follow_up",
