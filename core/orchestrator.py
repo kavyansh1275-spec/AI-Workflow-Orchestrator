@@ -27,8 +27,14 @@ class Orchestrator:
     def apply_clarifications(self, workflow: WorkflowPlan, answers: dict[str, str]) -> WorkflowPlan:
         replacements = {
             "email recipient": ("gmail", "send_email", "to"),
+            "business owner email": ("gmail", "send_email", "to"),
             "destination channel": (None, None, "channel"),
+            "team notification channel": ("slack", "send_message", "channel"),
             "Notion destination": ("notion", "create_page", "title"),
+            "follow-up task destination": ("notion", "create_page", "title"),
+            "Google Sheets destination": ("google_sheets", "append_row", "spreadsheet"),
+            "order database": ("airtable", "create_record", "base"),
+            "order source": ("webhook", "receive_request", "source"),
         }
         updated = workflow.model_copy(deep=True)
         for item, answer in answers.items():
