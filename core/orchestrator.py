@@ -31,7 +31,7 @@ class Orchestrator:
             "destination channel": (None, None, "channel"),
             "team notification channel": ("slack", "send_message", "channel"),
             "Notion destination": ("notion", "create_page", "title"),
-            "follow-up task destination": ("notion", "create_page", "title"),
+            "follow-up task destination": ("notion", "create_page", "destination"),
             "Google Sheets destination": ("google_sheets", "append_row", "spreadsheet"),
             "order database": ("airtable", "create_record", "base"),
             "order source": ("webhook", "receive_request", "source"),
